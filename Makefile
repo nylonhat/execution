@@ -1,6 +1,6 @@
 CXX := clang++
 CEXT := cpp
-CXXFLAGS := -Wall -g -O3 -std=c++23
+CXXFLAGS := -O3  -std=c++23 -ftemplate-depth=10000
 
 SRCPATH := ./src
 BINPATH := ./bin
