@@ -21,7 +21,7 @@ struct bind_recvr {
 };
 
 
-template<class S1, class F, class R>
+template<Sender S1, class F, class R>
 struct bind_op {
 	using BR = bind_recvr<F, R>;
 	using Op1 = connect_t<S1, BR>;
