@@ -1,6 +1,7 @@
 #ifndef BIND_H
 #define BIND_H
 
+#include "sender.h"
 
 template<class F, class R>
 struct bind_recvr {
