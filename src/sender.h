@@ -29,5 +29,8 @@ auto connect = [](Sender auto sender, auto recvr){
         return sender.connect(recvr);
 };
 
+template<Sender S, typename R>
+using connect_t = std::invoke_result_t<decltype(::connect), S, R>;
+
 
 #endif//SENDER_H
