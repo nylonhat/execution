@@ -6,7 +6,7 @@
 #include "scheduler.h"
 
 template<typename BOP>
-struct branch_recvr1 {
+struct BranchRecvr1 {
 	auto set_value(auto v1){
 		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, op1);
 		auto& bop = *reinterpret_cast<BOP*>(byte_p);
@@ -28,7 +28,7 @@ struct branch_recvr1 {
 };
 
 template<typename BOP>
-struct branch_recvr2 {
+struct BranchRecvr2 {
 	auto set_value(auto v2){
 		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, op2);
 		auto& bop = *reinterpret_cast<BOP*>(byte_p);
@@ -46,14 +46,14 @@ struct branch_recvr2 {
 
 
 template<Sender S1, Sender S2, typename ER>
-struct branch_op {
+struct BranchOp {
 	using R1 = single_value_t<S1>;
 	using R2 = single_value_t<S2>;
 
-	using SELF = branch_op<S1, S2, ER>;
-	using BR1 = branch_recvr1<SELF>;
+	using SELF = BranchOp<S1, S2, ER>;
+	using BR1 = BranchRecvr1<SELF>;
 	using OP1 = connect_t<S1, BR1>;
-	using BR2 = branch_recvr2<SELF>;
+	using BR2 = BranchRecvr2<SELF>;
 	using OP2 = connect_t<S2, BR2>;
 
 	[[no_unique_address]] ER end_recvr;
@@ -77,7 +77,7 @@ struct branch_op {
 	
 	std::atomic<std::int8_t> counter = 1;
 	
-	branch_op(SchedulerHandle scheduler, S1 sender1, S2 sender2, ER end_recvr)
+	BranchOp(SchedulerHandle scheduler, S1 sender1, S2 sender2, ER end_recvr)
 		: end_recvr{end_recvr}
 		, param{scheduler, sender1, sender2}
 	{}
@@ -96,7 +96,7 @@ struct branch_op {
 };
 
 template<Sender S1, Sender S2>
-struct branch_sender {
+struct BranchSender {
 	using value_t = values_cat_t<S1, S2>;
 
 	[[no_unique_address]] SchedulerHandle scheduler;
@@ -104,12 +104,12 @@ struct branch_sender {
 	[[no_unique_address]] S2 sender2;
 	
 	auto connect(auto end_recvr){
-		return branch_op{scheduler, sender1, sender2, end_recvr};
+		return BranchOp{scheduler, sender1, sender2, end_recvr};
 	}
 };
 
 auto branch = [](Scheduler auto& scheduler, Sender auto sender1, Sender auto sender2){
-	return branch_sender{scheduler, sender1, sender2};
+	return BranchSender{scheduler, sender1, sender2};
 };
 
 #endif//BRANCH_H
