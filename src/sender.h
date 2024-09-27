@@ -1,0 +1,33 @@
+#ifndef SENDER_H
+#define SENDER_H
+
+struct noop_recvr {        
+        auto set_value(auto... args){}
+};
+
+auto id = [](auto i){return i};
+
+template<typename S>
+concept Sender = requires(S sender, noop_recvr recvr){
+        sender.connect(recvr);
+};
+
+template<typename F, Sender S>
+using apply_values_t = std::invoke_result_t<decltype(&std::apply<F, typename S::value_t>), F, typename S::value_t>;        
+
+template<Senders... Ss>
+using values_join_t =  std::invoke_result_t<decltype(&std::tuple_cat<typename Ss::value_t...>), Ss::value_t...>;        
+
+template<Sender S>
+using single_value_t = apply_values_t<decltype(id), S>;
+
+auto start = [](auto& op){
+        op.start();
+};
+
+auto connect = [](Sender auto sender, auto recvr){
+        return sender.connect(recvr);
+};
+
+
+#endif//SENDER_H
