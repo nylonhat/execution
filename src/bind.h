@@ -35,35 +35,35 @@ struct bind_op {
 		[[no_unique_address]] R end_recvr = {};
 	};
 
-	   union {
-	      	Param init = {};
-		      Op1 op1;
-		      Op2 op2;
-	   };
+	union {
+		Param init = {};
+		Op1 op1;
+		Op2 op2;
+	};
 
-    bind_op(){}
+	bind_op(){}
 
-    bind_op(S1 sender1, F mfunc, R end_recvr)
-		      : init{sender1, mfunc, end_recvr}
-	   {}
+	bind_op(S1 sender1, F mfunc, R end_recvr)
+		: init{sender1, mfunc, end_recvr}
+	{}
 
-	   auto start(){
-		      BR recvr = BR{init.end_recvr, init.mfunc};
-		      op1 = ::connect(init.sender1, recvr);
-		      ::start(op1);
-	   }
+	auto start(){
+		BR recvr = BR{init.end_recvr, init.mfunc};
+		op1 = ::connect(init.sender1, recvr);
+		::start(op1);
+	}
 };
 
 template<class F, Sender S>
 struct bind_sender {
-	   using value_t = apply_values_t<F, S>::value_t;
+	using value_t = apply_values_t<F, S>::value_t;
 
-   	[[no_unique_address]] S sender1;
-    [[no_unique_address]] F mfunc;
+	[[no_unique_address]] S sender1;
+	[[no_unique_address]] F mfunc;
 
-	   auto connect(auto end_recvr){
-		      return bind_op{sender1, mfunc, end_recvr};
-	   }
+	auto connect(auto end_recvr){
+		return bind_op{sender1, mfunc, end_recvr};
+	}
 };
 
 auto bind = [](Sender auto sender, auto mfunc){
