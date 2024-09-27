@@ -15,6 +15,7 @@ struct branch_recvr1 {
 		auto old = bop.counter.fetch_sub(1);
 
 		if(old == std::numeric_limits<std::int8_t>::max()){
+			bop.counter.store(0);
 			return ::start(bop.op2);
 		}
 
