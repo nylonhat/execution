@@ -1,6 +1,8 @@
 #ifndef SENDER_H
 #define SENDER_H
 
+#include <functional>
+
 struct noop_recvr {        
         auto set_value(auto... args){}
 };
