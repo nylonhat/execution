@@ -5,7 +5,7 @@
 #include "sender.h"
 
 template<class T>
-struct sync_recvr {
+struct SyncRecvr {
         T* value;
         std::binary_semaphore* flag;
 
@@ -19,7 +19,8 @@ auto sync = []<class S>(S sender){
         using T = single_value_t<S>;
         T value;
         std::binary_semaphore flag{0};
-        auto op = ::connect(sender, sync_recvr{&value, &flag});
+        auto sync_recvr = SyncRecvr{&value, &flag};
+        auto op = ::connect(sender, sync_recvr);
         ::start(op);
         flag.acquire();
         return value;
