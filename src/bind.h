@@ -6,10 +6,10 @@
 template<class F, class R>
 struct bind_recvr {
     [[no_unique_address]] R end_recvr;
-	   [[no_unique_address]] F mfunc;
+    [[no_unique_address]] F mfunc;
 
-   	template<class... Args>
-	   auto set_value(Args... args){
+    template<class... Args>
+    auto set_value(Args... args){
         using S2 = std::invoke_result_t<F, Args...>;
 	       using Op2 = connect_t<S2, R>;
 		
