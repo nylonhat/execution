@@ -11,12 +11,12 @@ struct bind_recvr {
 	template<class... Args>
 	auto set_value(Args... args){
 		using S2 = std::invoke_result_t<F, Args...>;
-		using Op2 = connect_t<S2, R>;
+		using OP2 = connect_t<S2, R>;
 		
 		S2 sender2 = std::invoke(mfunc, args...);
-		Op2& op2 = *reinterpret_cast<Op2*>(this);
-		op2 = connect(sender2, end_recvr);
-		start(op2);
+		OP2& op2 = *reinterpret_cast<OP2*>(this);
+		op2 = ::connect(sender2, end_recvr);
+		::start(op2);
 	}
 };
 
@@ -24,10 +24,10 @@ struct bind_recvr {
 template<Sender S1, class F, class R>
 struct bind_op {
 	using BR = bind_recvr<F, R>;
-	using Op1 = connect_t<S1, BR>;
+	using OP1 = connect_t<S1, BR>;
 
 	using S2 = apply_values_t<F, S1>; 
-	using Op2 = connect_t<S2, R>;
+	using OP2 = connect_t<S2, R>;
 
 	struct Param {
 		[[no_unique_address]] S1 sender1 = {};
@@ -37,8 +37,8 @@ struct bind_op {
 
 	union {
 		Param init = {};
-		Op1 op1;
-		Op2 op2;
+		OP1 op1;
+		OP2 op2;
 	};
 
 	bind_op(){}
