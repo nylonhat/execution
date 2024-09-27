@@ -38,5 +38,8 @@ auto set_value = [](auto recvr, auto... args){
         recvr.set_value(args...);
 };
 
+auto operator | (Sender auto value, auto func){
+        return func(value);
+}
 
 #endif//SENDER_H
