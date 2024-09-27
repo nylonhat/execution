@@ -7,7 +7,6 @@
 
 template<typename BOP>
 struct branch_recvr1 {
-
 	auto set_value(auto v1){
 		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, op1);
 		auto& bop = *reinterpret_cast<BOP*>(byte_p);
@@ -24,14 +23,11 @@ struct branch_recvr1 {
 		}
 
 		return;
-
 	}
-
 };
 
 template<typename BOP>
 struct branch_recvr2 {
-
 	auto set_value(auto v2){
 		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, op2);
 		auto& bop = *reinterpret_cast<BOP*>(byte_p);
@@ -44,11 +40,8 @@ struct branch_recvr2 {
 		}
 
 		return;
-
 	}
-
 };
-
 
 
 template<Sender S1, Sender S2, typename ER>
@@ -109,8 +102,6 @@ struct branch_sender {
 	[[no_unique_address]] S1 sender1;
 	[[no_unique_address]] S2 sender2;
 	
-
-
 	auto connect(auto end_recvr){
 		return branch_op{scheduler, sender1, sender2, end_recvr};
 	}
