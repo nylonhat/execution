@@ -32,5 +32,9 @@ auto connect = [](Sender auto sender, auto recvr){
 template<Sender S, typename R>
 using connect_t = std::invoke_result_t<decltype(::connect), S, R>;
 
+auto set_value = [](auto recvr, auto... args){
+        recvr.set_value(args...);
+};
+
 
 #endif//SENDER_H
