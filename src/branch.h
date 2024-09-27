@@ -1,28 +1,16 @@
 #ifndef BRANCH_H
 #define BRANCH_H
 
-
 #include <atomic>
-#include "bind.h"
+#include "sender.h"
 #include "scheduler.h"
 
-template<typename F, typename Tuple>
-using apply_result_t = std::invoke_result_t<decltype(&std::apply<F, Tuple>), F, Tuple>;	
-
-template<typename... Tuples>
-using tuple_cat_result_t =  std::invoke_result_t<decltype(&std::tuple_cat<Tuples...>), Tuples...>;	
-
-template<typename S>
-using tuple_t = std::tuple_element_t<0, typename S::value_t>;
-
-
-
-template<typename BOp>
+template<typename BOP>
 struct branch_recvr1 {
 
 	auto set_value(auto v1){
-		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOp, op1);
-		auto& bop = *reinterpret_cast<BOp*>(byte_p);
+		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, op1);
+		auto& bop = *reinterpret_cast<BOP*>(byte_p);
 		
 		bop.r1 = v1;
 		auto old = bop.counter.fetch_sub(1);
@@ -41,12 +29,12 @@ struct branch_recvr1 {
 
 };
 
-template<typename BOp>
+template<typename BOP>
 struct branch_recvr2 {
 
 	auto set_value(auto v2){
-		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOp, op2);
-		auto& bop = *reinterpret_cast<BOp*>(byte_p);
+		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, op2);
+		auto& bop = *reinterpret_cast<BOP*>(byte_p);
 		
 		bop.r2 = v2;
 		auto old = bop.counter.fetch_sub(1);
@@ -65,14 +53,14 @@ struct branch_recvr2 {
 
 template<Sender S1, Sender S2, typename ER>
 struct branch_op {
-	using R1 = int; //tuple_t<S1>;
-	using R2 = int; //tuple_t<S2>;
+	using R1 = single_value_t<S1>;
+	using R2 = single_value_t<S2>;
 
-	using Self = branch_op<S1, S2, ER>;
-	using BR1 = branch_recvr1<Self>;
-	using Op1 = std::invoke_result_t<decltype(connect), S1, BR1>;
-	using BR2 = branch_recvr2<Self>;
-	using Op2 = std::invoke_result_t<decltype(connect), S2, BR2>;
+	using SELF = branch_op<S1, S2, ER>;
+	using BR1 = branch_recvr1<SELF>;
+	using OP1 = connect_t<S1, BR1>;
+	using BR2 = branch_recvr2<SELF>;
+	using OP2 = connect_t<S2, BR2>;
 
 	[[no_unique_address]] ER end_recvr;
 
@@ -84,12 +72,12 @@ struct branch_op {
 
 	union {
 		Param param;
-		Op1 op1;
+		OP1 op1;
 		R1 r1;
 	};
 
 	union {
-		Op2 op2;
+		OP2 op2;
 		R2 r2;
 	};
 	
@@ -115,8 +103,8 @@ struct branch_op {
 
 template<Sender S1, Sender S2>
 struct branch_sender {
-	using value_t = tuple_cat_result_t<typename S1::value_t, typename S2::value_t>;
-	//using value_t = std::tuple<int, int>;
+	using value_t = values_cat_t<S1, S2>;
+
 	[[no_unique_address]] SchedulerHandle scheduler;
 	[[no_unique_address]] S1 sender1;
 	[[no_unique_address]] S2 sender2;
