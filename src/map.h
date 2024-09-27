@@ -16,12 +16,12 @@ struct MapRecvr {
 
 template<Sender S, class F>
 struct MapSender {
-        using value_t = std::tuple<apply_value_t<F, S>>;
+        using value_t = std::tuple<apply_values_t<F, S>>;
         [[no_unique_address]] S sender;
         [[no_unique_address]] F func;
 
         auto connect(auto end_recvr){
-                auto map_rcvr = MapRecvr{end_recvr, func};
+                auto map_recvr = MapRecvr{end_recvr, func};
                 return ::connect(sender, map_recvr);
         }
 

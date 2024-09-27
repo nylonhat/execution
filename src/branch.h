@@ -97,7 +97,7 @@ struct BranchOp {
 
 template<Sender S1, Sender S2>
 struct BranchSender {
-	using value_t = values_cat_t<S1, S2>;
+	using value_t = values_join_t<S1, S2>;
 
 	[[no_unique_address]] SchedulerHandle scheduler;
 	[[no_unique_address]] S1 sender1;

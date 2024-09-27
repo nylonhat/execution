@@ -15,7 +15,7 @@ struct SyncRecvr {
         }
 };
 
-auto sync = []<class S>(S sender){
+auto sync_wait = []<class S>(S sender){
         using T = single_value_t<S>;
         T value;
         std::binary_semaphore flag{0};

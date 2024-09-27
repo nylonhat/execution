@@ -27,7 +27,7 @@ int main(){
 	Sender auto e = d >> pure;
 	Sender auto f = e > add5;
 	Sender auto g = f >> pure;
-	int h = g | sync;
+	int h = g | sync_wait;
 
 	//int g = c | sync;
 	//int e = d | sync;
