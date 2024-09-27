@@ -15,7 +15,7 @@ concept Sender = requires(S sender, noop_recvr recvr){
 template<typename F, Sender S>
 using apply_values_t = std::invoke_result_t<decltype(&std::apply<F, typename S::value_t>), F, typename S::value_t>;        
 
-template<Senders... Ss>
+template<Sender... Ss>
 using values_join_t =  std::invoke_result_t<decltype(&std::tuple_cat<typename Ss::value_t...>), Ss::value_t...>;        
 
 template<Sender S>
