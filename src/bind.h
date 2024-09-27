@@ -4,7 +4,7 @@
 #include "sender.h"
 
 template<class F, class R>
-struct bind_recvr {
+struct BindRecvr {
 	[[no_unique_address]] R end_recvr;
 	[[no_unique_address]] F mfunc;
 
@@ -22,8 +22,8 @@ struct bind_recvr {
 
 
 template<Sender S1, class F, class R>
-struct bind_op {
-	using BR = bind_recvr<F, R>;
+struct BindOp {
+	using BR = BindRecvr<F, R>;
 	using OP1 = connect_t<S1, BR>;
 
 	using S2 = apply_values_t<F, S1>; 
@@ -41,9 +41,9 @@ struct bind_op {
 		OP2 op2;
 	};
 
-	bind_op(){}
+	BindOp(){}
 
-	bind_op(S1 sender1, F mfunc, R end_recvr)
+	BindOp(S1 sender1, F mfunc, R end_recvr)
 		: init{sender1, mfunc, end_recvr}
 	{}
 
@@ -55,19 +55,19 @@ struct bind_op {
 };
 
 template<class F, Sender S>
-struct bind_sender {
+struct BindSender {
 	using value_t = apply_values_t<F, S>::value_t;
 
 	[[no_unique_address]] S sender1;
 	[[no_unique_address]] F mfunc;
 
 	auto connect(auto end_recvr){
-		return bind_op{sender1, mfunc, end_recvr};
+		return BindOp{sender1, mfunc, end_recvr};
 	}
 };
 
 auto bind = [](Sender auto sender, auto mfunc){
-	return bind_sender{sender, mfunc};
+	return BindSender{sender, mfunc};
 };
 
 
