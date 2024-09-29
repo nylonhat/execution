@@ -72,7 +72,7 @@ auto bind = [](Sender auto sender, auto mfunc){
 };
 
 
-auto operator >> (Sender auto sender, auto mfunc){
+auto operator >= (Sender auto sender, auto mfunc){
 	return bind(sender, mfunc);
 }
 

@@ -3,15 +3,15 @@
 
 #include <functional>
 
-struct noop_recvr {        
-        auto set_value(auto... args){}
+struct NoopRecvr {        
+	auto set_value(auto... args){}
 };
 
 auto id = [](auto i){return i;};
 
 template<typename S>
-concept Sender = requires(S sender, noop_recvr recvr){
-        sender.connect(recvr);
+concept Sender = requires(S sender, NoopRecvr recvr){
+	sender.connect(recvr);
 };
 
 template<typename F, Sender S>
@@ -24,22 +24,22 @@ template<Sender S>
 using single_value_t = apply_values_t<decltype(id), S>;
 
 auto start = [](auto& op){
-        op.start();
+	op.start();
 };
 
 auto connect = [](Sender auto&& sender, auto recvr){
-        return sender.connect(recvr);
+	return sender.connect(recvr);
 };
 
 template<Sender S, typename R>
 using connect_t = std::invoke_result_t<decltype(::connect), S, R>;
 
-auto set_value = [](auto recvr, auto... args){
-        recvr.set_value(args...);
+auto set_value = [](auto&& recvr, auto... args){
+	recvr.set_value(args...);
 };
 
 auto operator | (Sender auto value, auto func){
-        return func(value);
+	return func(value);
 }
 
 #endif//SENDER_H
