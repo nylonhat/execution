@@ -3,7 +3,7 @@
 
 #include "sender.h"
 
-template<class F, class R>
+template<class R, class F>
 struct BindRecvr {
 	[[no_unique_address]] R end_recvr;
 	[[no_unique_address]] F mfunc;
@@ -15,7 +15,7 @@ struct BindRecvr {
 		
 		S2 sender2 = std::invoke(mfunc, args...);
 		OP2& op2 = *reinterpret_cast<OP2*>(this);
-		op2 = ::connect(sender2, end_recvr);
+		new (&op2) OP2 (::connect(sender2, end_recvr));
 		::start(op2);
 	}
 };
@@ -23,8 +23,9 @@ struct BindRecvr {
 
 template<Sender S1, class F, class R>
 struct BindOp {
-	using BR = BindRecvr<F, R>;
+	using BR = BindRecvr<R, F>;
 	using OP1 = connect_t<S1, BR>;
+
 
 	using S2 = apply_values_t<F, S1>; 
 	using OP2 = connect_t<S2, R>;
@@ -49,7 +50,7 @@ struct BindOp {
 
 	auto start(){
 		BR recvr = BR{init.end_recvr, init.mfunc};
-		op1 = ::connect(init.sender1, recvr);
+		new (&op1) OP1 (::connect(init.sender1, recvr));
 		::start(op1);
 	}
 };

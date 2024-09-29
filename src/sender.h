@@ -27,7 +27,7 @@ auto start = [](auto& op){
         op.start();
 };
 
-auto connect = [](Sender auto sender, auto recvr){
+auto connect = [](Sender auto&& sender, auto recvr){
         return sender.connect(recvr);
 };
 

@@ -77,19 +77,21 @@ struct BranchOp {
 	
 	std::atomic<std::int8_t> counter = 1;
 	
+
 	BranchOp(SchedulerHandle scheduler, S1 sender1, S2 sender2, ER end_recvr)
 		: end_recvr{end_recvr}
 		, param{scheduler, sender1, sender2}
 	{}
 
 
+
 	auto start(){
 		auto p = param;
-		op2 = ::connect(p.sender2, BR2{});
+		new (&op2) OP2 (::connect(p.sender2, BR2{}));
 		if(!p.scheduler.schedule(op2)){
 			counter.store(std::numeric_limits<std::int8_t>::max());
 		}
-		op1 = ::connect(p.sender1, BR1{});
+		new (&op1) OP1 (::connect(p.sender1, BR1{}));
 		::start(op1);
 	}
 
@@ -103,7 +105,8 @@ struct BranchSender {
 	[[no_unique_address]] S1 sender1;
 	[[no_unique_address]] S2 sender2;
 	
-	auto connect(auto end_recvr){
+	template<typename ER>
+	auto connect(ER end_recvr){
 		return BranchOp{scheduler, sender1, sender2, end_recvr};
 	}
 };

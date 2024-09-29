@@ -54,7 +54,9 @@ auto type_erased_schedule(void* type_ptr, OpHandle op_handle){
 struct SchedulerHandle {
 	void* type_ptr = nullptr;
 	bool (*schedule_ptr)(void*, OpHandle) = nullptr;
-	
+
+	SchedulerHandle() = default;
+
 	template<Scheduler S>
 	SchedulerHandle(S& scheduler)
 		: type_ptr{std::addressof(scheduler)}
