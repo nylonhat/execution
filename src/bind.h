@@ -26,7 +26,6 @@ struct BindOp {
 	using BR = BindRecvr<R, F>;
 	using OP1 = connect_t<S1, BR>;
 
-
 	using S2 = apply_values_t<F, S1>; 
 	using OP2 = connect_t<S2, R>;
 

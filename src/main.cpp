@@ -7,7 +7,6 @@
 
 Threadpool pool{1};
 
-
 auto add = [](int a, int b) -> int{
 	return a + b;
 };
@@ -17,8 +16,8 @@ auto add5 = [](int a) -> int{
 };
 
 auto purez = [](auto v){
-	return pure(v) >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure;
-
+	Sender auto s = pure(v) >= pure >= pure >= pure >= pure;  
+	return s >= pure >= pure >= pure >= pure >= pure >= pure;
 };
 
 int main(){
@@ -27,5 +26,4 @@ int main(){
 	auto c = b >= pure2 > add >= pure > add5 >= purez | sync_wait;
 	
 	return 0;
-
 }
