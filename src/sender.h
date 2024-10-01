@@ -23,18 +23,25 @@ using values_join_t =  std::invoke_result_t<decltype(&std::tuple_cat<typename Ss
 template<Sender S>
 using single_value_t = apply_values_t<decltype(id), S>;
 
-auto start = [](auto& op){
+template<typename O>
+concept OpState = requires(O op){
 	op.start();
 };
 
-auto connect = [](Sender auto&& sender, auto recvr){
+
+
+auto start = [](auto&& op) {
+	op.start();
+};
+
+auto connect = [](Sender auto&& sender, auto&& recvr){
 	return sender.connect(recvr);
 };
 
 template<Sender S, typename R>
 using connect_t = std::invoke_result_t<decltype(::connect), S, R>;
 
-auto set_value = [](auto&& recvr, auto... args){
+auto set_value = [](auto&& recvr, auto&&... args){
 	recvr.set_value(args...);
 };
 

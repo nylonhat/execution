@@ -6,8 +6,8 @@ struct PureOp {
         [[no_unique_address]] R recvr;
         T value;
 
-        auto start(){
-                recvr.set_value(value);
+        void start(){
+				recvr.set_value(value);
         }
 };
 

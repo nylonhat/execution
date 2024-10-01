@@ -8,8 +8,8 @@ struct MapRecvr {
 	[[no_unique_address]] ER end_recvr;
     [[no_unique_address]] F func;
 
-	auto set_value(auto... args){
-		end_recvr.set_value(func(args...));
+	void set_value(auto... args){
+		return ::set_value(end_recvr, func(args...));
 	}
 };        
 

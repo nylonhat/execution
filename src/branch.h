@@ -14,7 +14,7 @@ struct BranchRecvr1 {
 		bop.r1 = v1;
 		auto old = bop.counter.fetch_sub(1);
 
-		if(old == std::numeric_limits<std::int8_t>::max()){
+		if(old == 2){
 			bop.counter.store(0);
 			return ::start(bop.op2);
 		}
@@ -88,9 +88,10 @@ struct BranchOp {
 	auto start(){
 		auto p = param;
 		new (&op2) OP2 (::connect(p.sender2, BR2{}));
-		if(!p.scheduler.schedule(op2)){
-			counter.store(std::numeric_limits<std::int8_t>::max());
-		}
+
+		std::int8_t shortcut = !p.scheduler.schedule(op2);
+		counter.fetch_add(shortcut);
+
 		new (&op1) OP1 (::connect(p.sender1, BR1{}));
 		::start(op1);
 	}

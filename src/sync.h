@@ -2,6 +2,7 @@
 #define SYNC_H
 
 #include <semaphore>
+#include <print>
 #include "sender.h"
 
 template<class T>
@@ -12,6 +13,7 @@ struct SyncRecvr {
         auto set_value(auto v){
                 *value = v;
                 flag->release();
+				return;
         }
 };
 
@@ -21,7 +23,7 @@ auto sync_wait = []<class S>(S sender){
         std::binary_semaphore flag{0};
         auto sync_recvr = SyncRecvr{&value, &flag};
         auto op = ::connect(sender, sync_recvr);
-        ::start(op);
+		::start(op);
         flag.acquire();
         return value;
 };
