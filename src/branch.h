@@ -58,14 +58,7 @@ struct BranchOp {
 
 	[[no_unique_address]] ER end_recvr;
 
-	struct Param {
-		[[no_unique_address]] SchedulerHandle scheduler;
-		[[no_unique_address]] S1 sender1;
-		[[no_unique_address]] S2 sender2;
-	};
-
 	union {
-		Param param;
 		OP1 op1;
 		R1 r1;
 	};
@@ -75,24 +68,23 @@ struct BranchOp {
 		R2 r2;
 	};
 	
+	SchedulerHandle scheduler;
 	std::atomic<std::int8_t> counter = 1;
 	
 
 	BranchOp(SchedulerHandle scheduler, S1 sender1, S2 sender2, ER end_recvr)
 		: end_recvr{end_recvr}
-		, param{scheduler, sender1, sender2}
+		, op1{::connect(sender1, BR1{})}
+		, op2{::connect(sender2, BR2{})}
+		, scheduler{scheduler}
 	{}
 
 
 
 	auto start(){
-		auto p = param;
-		new (&op2) OP2 (::connect(p.sender2, BR2{}));
-
-		std::int8_t shortcut = !p.scheduler.schedule(op2);
+		scheduler.schedule(op2);
+		std::int8_t shortcut = !scheduler.schedule(op2);
 		counter.fetch_add(shortcut);
-
-		new (&op1) OP1 (::connect(p.sender1, BR1{}));
 		::start(op1);
 	}
 

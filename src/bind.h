@@ -29,14 +29,7 @@ struct BindOp {
 	using S2 = apply_values_t<F, S1>; 
 	using OP2 = connect_t<S2, R>;
 
-	struct Param {
-		[[no_unique_address]] S1 sender1 = {};
-		[[no_unique_address]] F mfunc = {};
-		[[no_unique_address]] R end_recvr = {};
-	};
-
 	union {
-		Param init = {};
 		OP1 op1;
 		OP2 op2;
 	};
@@ -44,12 +37,10 @@ struct BindOp {
 	BindOp(){}
 
 	BindOp(S1 sender1, F mfunc, R end_recvr)
-		: init{sender1, mfunc, end_recvr}
+		: op1{::connect(sender1, BR{end_recvr, mfunc})}
 	{}
 
 	auto start(){
-		BR recvr = BR{init.end_recvr, init.mfunc};
-		new (&op1) OP1 (::connect(init.sender1, recvr));
 		::start(op1);
 	}
 };

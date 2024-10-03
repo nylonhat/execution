@@ -18,8 +18,8 @@ struct RepeatRecvr {
 		auto& op = *reinterpret_cast<OP*>(this);
 		
 		count++;
-		auto recvr = SELF{end_recvr, sender, count};
-		if(count < 1000'000'000){
+		if(count < 1'000'000){
+			auto recvr = SELF{end_recvr, sender, count};
 			new (&op) OP (::connect(recvr.sender, recvr));
 			return ::start(op);
 			
