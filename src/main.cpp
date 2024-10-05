@@ -21,8 +21,7 @@ auto add5 = [](int a){
 };
 
 auto purez = [](auto v){
-	Sender auto s = pure(v) >= pure >= pure >= pure >= pure  >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure>= pure >= pure >= pure >= pure >= pure>= pure >= pure >= pure >= pure >= pure>= pure >= pure >= pure >= pure >= pure;
-	return s >= pure >= pure >= pure >= pure >= pure >= pure>= pure >= pure >= pure >= pure >= pure>= pure >= pure >= pure >= pure >= pure>= pure >= pure >= pure >= pure >= pure >=pure >= pure;
+	return pure(v) >= pure >= pure >= pure >= pure  >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure  >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure  >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure  >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure  >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure >= pure;
 };
 
 auto print = [](auto v){
@@ -36,9 +35,10 @@ int main(){
 	//Sender auto b = branch(pool, purez(19), pure(5));
 	//auto r = b >= pure2 > add >= pure > add5 >= purez | sync_wait;
 
-	auto r = branch(pool, pure(42), pure(69)) > add >= purez | repeat | sync_wait;
-	//auto r = pure2(11, 23) > add | repeat | sync_wait;
+	auto r = branch(pool, pure(42), pure(69)) > add >= purez > print | repeat | sync_wait;
+	//auto r = pure2(69, 42) > add >= purez  | repeat | sync_wait;
 
+	//auto r = pure(5) >= purez | sync_wait;
 	std::println("{}", r);
 	return 0;
 }

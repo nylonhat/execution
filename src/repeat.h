@@ -1,47 +1,48 @@
 #ifndef REPEAT_H
 #define REPEAT_H
 
-#include <print>
 
 #include "sender.h"
-#include "timer.h"
 
-template<typename ER, Sender S>
+template<typename RO>
 struct RepeatRecvr {
-	[[no_unique_address]] ER end_recvr;
-	[[no_unique_address]] S sender;
-	int count = 0;
 
 	void set_value(auto... args){
-		using SELF = RepeatRecvr<ER,S>;
-		using OP = connect_t<S, SELF>; 
-		auto& op = *reinterpret_cast<OP*>(this);
-		
-		count++;
-		if(count < 1'000'000){
-			auto recvr = SELF{end_recvr, sender, count};
-			new (&op) OP (::connect(recvr.sender, recvr));
-			return ::start(op);
-			
-		}
-
-		return end_recvr.set_value(args...);
+		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(RO, op);
+		auto& repeat_op = *reinterpret_cast<RO*>(byte_p);
+	
+		::start(repeat_op);
 	}
 };
 
 template<typename ER, Sender S>
 struct RepeatOp {
-	using RR = RepeatRecvr<ER, S>;
+	using RO = RepeatOp<ER, S>;
+	using RR = RepeatRecvr<RO>;
 	using OP = connect_t<S, RR>;
 	
-	OP op;
+	[[no_unique_address]] ER end_recvr;
+
+	union{
+		OP op;
+	};
+	
+	[[no_unique_address]] S sender;
+	std::size_t count = 0;
 
 	RepeatOp(S sender, ER end_recvr)
-		: op {::connect(sender, RR{end_recvr, sender, 0})}
+		: end_recvr{end_recvr}
+		, sender{sender}
 	{}
 	
 	auto start(){
-		::start(op);
+
+		if(count < 1'000'000){
+			count++;
+			new (&op) OP (::connect(sender, RR{}));
+			return ::start(op);
+		}
+		return end_recvr.set_value(count);
 	}
 	
 };
@@ -59,5 +60,6 @@ struct RepeatSender {
 auto repeat = [](Sender auto sender){
 	return RepeatSender{sender};
 };
+
 
 #endif//REPEAT_H
