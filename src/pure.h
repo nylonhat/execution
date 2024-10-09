@@ -22,8 +22,9 @@ struct PureSender {
         }
 };
 
-auto pure = [](auto value){
-        return PureSender{value};
+
+auto pure = []<class V>(V value){
+        return PureSender<V>{value};
 };
 
 template<class R, class A, class B>

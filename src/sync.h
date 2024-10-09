@@ -23,6 +23,7 @@ auto sync_wait = []<class S>(S sender){
         std::binary_semaphore flag{0};
         auto sync_recvr = SyncRecvr{&value, &flag};
         auto op = ::connect(sender, sync_recvr);
+		//std::println("final op size: {} bytes", sizeof(op));
 		::start(op);
         flag.acquire();
         return value;

@@ -15,8 +15,8 @@ struct BindRecvr {
 		
 		S2 sender2 = std::invoke(mfunc, args...);
 		OP2& op2 = *reinterpret_cast<OP2*>(this);
-		new (&op2) OP2 (::connect(sender2, end_recvr));
-		::start(op2);
+		auto* op2_p = new (&op2) OP2 (::connect(sender2, end_recvr));
+		::start(*op2_p);
 	}
 };
 

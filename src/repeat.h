@@ -3,10 +3,10 @@
 
 
 #include "sender.h"
+#include <iostream>
 
 template<typename RO>
 struct RepeatRecvr {
-
 	void set_value(auto... args){
 		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(RO, op);
 		auto& repeat_op = *reinterpret_cast<RO*>(byte_p);
@@ -28,6 +28,7 @@ struct RepeatOp {
 	};
 	
 	[[no_unique_address]] S sender;
+
 	std::size_t count = 0;
 
 	RepeatOp(S sender, ER end_recvr)
@@ -36,20 +37,19 @@ struct RepeatOp {
 	{}
 	
 	auto start(){
-
-		if(count < 1'000'000){
+		if(count < 3){
 			count++;
 			new (&op) OP (::connect(sender, RR{}));
 			return ::start(op);
 		}
 		return end_recvr.set_value(count);
 	}
-	
+
 };
 
 template<Sender S>
 struct RepeatSender {
-	using value_t = S::value_t;
+	using value_t = std::tuple<std::size_t>;
 	S sender;
 
 	auto connect(auto end_recvr){
@@ -57,8 +57,9 @@ struct RepeatSender {
 	}
 };
 
-auto repeat = [](Sender auto sender){
-	return RepeatSender{sender};
+auto repeat = []<Sender S>(S sender){
+	//explicit template to prevent copy constructor ambiguity
+	return RepeatSender<S>{sender};
 };
 
 
