@@ -28,12 +28,12 @@ void Threadpool::work(){
 		OpHandle task;
 		//dequeue from threads own queue first 
 		if(queues.at(worker_id).try_local_pop(task)){
-			task.start();
+			task.start({});
 			continue;
 		}
 		
 		if(master_queue.try_dequeue(task)){
-			task.start();
+			task.start({});
 			continue;
 		}
 
@@ -43,7 +43,7 @@ void Threadpool::work(){
 			int random_index = distribution(random_generator);
 		
 			if(queues.at(random_index).try_steal(task)){
-				task.start();
+				task.start({});
 				backoff.reset();
 				break;
 			}
@@ -62,14 +62,20 @@ Threadpool::~Threadpool(){
 	running.store(false);
 }
 
-bool Threadpool::schedule(OpHandle task){
+OpHandle Threadpool::schedule(OpHandle task){
 	//thread does not belong to this pool
 	if(my_pool != this){
-		return master_queue.try_enqueue(task);
+		if(master_queue.try_enqueue(task)){
+			return {};
+		}
+		return {task};
 	}
 
 	//enqueue task into threads own queue
-	return queues.at(worker_id).try_local_push(task);
+	if(queues.at(worker_id).try_local_push(task)){
+		return {};
+	}
+	return {task};
 }
 
 

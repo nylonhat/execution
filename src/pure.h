@@ -1,13 +1,15 @@
 #ifndef PURE_H
 #define PURE_H
 
+#include "sender.h"
+
 template<class R, class T>
 struct PureOp {
         [[no_unique_address]] R recvr;
         T value;
 
-        void start(){
-				recvr.set_value(value);
+        void start(OpHandle op_handle){
+				recvr.set_value(op_handle, value);
         }
 };
 
@@ -33,8 +35,8 @@ struct Pure2Op {
         A a;
         B b;
 
-        auto start(){
-                recvr.set_value(a, b);
+        auto start(OpHandle op_handle){
+                recvr.set_value(op_handle, a, b);
         }
 };
 

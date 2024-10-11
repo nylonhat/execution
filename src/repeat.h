@@ -7,11 +7,11 @@
 
 template<typename RO>
 struct RepeatRecvr {
-	void set_value(auto... args){
+	void set_value(OpHandle op_handle, auto... args){
 		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(RO, op);
 		auto& repeat_op = *reinterpret_cast<RO*>(byte_p);
 	
-		::start(repeat_op);
+		::start(repeat_op, op_handle);
 	}
 };
 
@@ -36,13 +36,13 @@ struct RepeatOp {
 		, sender{sender}
 	{}
 	
-	auto start(){
-		if(count < 3){
+	auto start(OpHandle op_handle){
+		if(count < 1'000'000){
 			count++;
 			new (&op) OP (::connect(sender, RR{}));
-			return ::start(op);
+			return ::start(op, op_handle);
 		}
-		return end_recvr.set_value(count);
+		return end_recvr.set_value(op_handle, count);
 	}
 
 };

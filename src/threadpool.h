@@ -33,7 +33,7 @@ private:
 	void work();
 
 public:
-	bool schedule(OpHandle task);
+	OpHandle schedule(OpHandle task);
 	
 
 };

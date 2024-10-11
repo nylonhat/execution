@@ -7,29 +7,24 @@
 
 template<typename BOP>
 struct BranchRecvr1 {
-	auto set_value(auto v1){
+	auto set_value(OpHandle op_handle, auto v1){
 		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, op1);
 		auto& bop = *reinterpret_cast<BOP*>(byte_p);
 		
 		bop.r1 = v1;
 		auto old = bop.counter.fetch_sub(1);
 
-		//if(old == 2){
-		//	bop.counter.store(0);
-		//	return ::start(bop.op2);
-		//}
-
 		if(old == 0){
-			return bop.end_recvr.set_value(bop.r1, bop.r2);
+			return bop.end_recvr.set_value(bop.cont, bop.r1, bop.r2);
 		}
 
-		return;
+		return op_handle.start({});
 	}
 };
 
 template<typename BOP>
 struct BranchRecvr2 {
-	auto set_value(auto v2){
+	auto set_value(OpHandle op_handle, auto v2){
 		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, op2);
 		auto& bop = *reinterpret_cast<BOP*>(byte_p);
 		
@@ -37,10 +32,10 @@ struct BranchRecvr2 {
 		auto old = bop.counter.fetch_sub(1);
 
 		if(old == 0){
-			return bop.end_recvr.set_value(bop.r1, bop.r2);
+			return bop.end_recvr.set_value(bop.cont, bop.r1, bop.r2);
 		}
 
-		return;
+		return op_handle.start({});
 	}
 };
 
@@ -71,8 +66,8 @@ struct BranchOp {
 	};
 	
 	SchedulerHandle scheduler;
+	OpHandle cont;	
 	std::atomic<std::int8_t> counter = 1;
-	
 
 	BranchOp(SchedulerHandle scheduler, S1 sender1, S2 sender2, ER end_recvr)
 		: end_recvr{end_recvr}
@@ -81,13 +76,10 @@ struct BranchOp {
 		, scheduler{scheduler}
 	{}
 
-
-
-	auto start(){
-		scheduler.schedule(op2);
-		//std::int8_t shortcut = !scheduler.schedule(op2);
-		//counter.fetch_add(shortcut);
-		::start(op1);
+	auto start(OpHandle op_handle){
+		cont = op_handle;
+		auto shortcut = scheduler.schedule(op2);
+		::start(op1, shortcut);
 	}
 
 };
