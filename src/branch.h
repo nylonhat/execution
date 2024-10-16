@@ -54,6 +54,11 @@ struct BranchOp {
 
 
 	[[no_unique_address]] ER end_recvr;
+	
+	union {
+		SchedulerHandle scheduler;
+		OpHandle cont;
+	};
 
 	union {
 		OP1 op1;
@@ -64,21 +69,20 @@ struct BranchOp {
 		OP2 op2;
 		R2 r2;
 	};
-	
-	SchedulerHandle scheduler;
-	OpHandle cont;	
+
 	std::atomic<std::int8_t> counter = 1;
 
 	BranchOp(SchedulerHandle scheduler, S1 sender1, S2 sender2, ER end_recvr)
 		: end_recvr{end_recvr}
+		, scheduler{scheduler}
 		, op1{::connect(sender1, BR1{})}
 		, op2{::connect(sender2, BR2{})}
-		, scheduler{scheduler}
 	{}
 
 	auto start(OpHandle op_handle){
-		cont = op_handle;
+		//scheduler.schedule({});
 		auto shortcut = scheduler.schedule(op2);
+		cont = op_handle;
 		::start(op1, shortcut);
 	}
 

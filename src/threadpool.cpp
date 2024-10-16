@@ -36,7 +36,8 @@ void Threadpool::work(){
 			task.start({});
 			continue;
 		}
-
+	
+		
 		//try to steal from other random queues
 		std::uniform_int_distribution<int> distribution(0,worker_id_ticket.load() -1);
 		for(size_t i=0; i<worker_id_ticket.load()-1; i++){
@@ -48,13 +49,14 @@ void Threadpool::work(){
 				break;
 			}
 		}
+
 		
 		if(worker_id == 0){
 			continue;
 		}
 		
-		//backoff.backoff();
-
+		backoff.backoff();
+		
 	}
 }
 
@@ -63,6 +65,7 @@ Threadpool::~Threadpool(){
 }
 
 OpHandle Threadpool::schedule(OpHandle task){
+	//return {task};
 	//thread does not belong to this pool
 	if(my_pool != this){
 		if(master_queue.try_enqueue(task)){

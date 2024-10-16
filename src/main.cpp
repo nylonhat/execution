@@ -34,15 +34,16 @@ int main(){
 	
 	//Sender auto b = branch(pool, purez(19), pure(5));
 	//auto r = b >= pure2 > add >= pure > add5 >= purez | sync_wait;
-
+	//auto r = pure2(3, 6) > add | repeat | sync_wait;
 	//auto r = (branch(pool, pure(42), pure(69)) > add >= purez  | repeat) | repeat | sync_wait;
 	auto r = branch(pool, pure(42), pure(69)) > add | repeat | sync_wait;
 	//auto r = pure2(23, 5) > add >= purez | repeat | sync_wait;
 	//auto r = (pure(5) >= purez > print | repeat) > print > id | repeat | sync_wait;
-	//auto r = (pure(42) | repeat) | repeat | sync_wait;
+	//auto r = pure(42) | repeat | sync_wait;
+	//auto r = pure(42) > pure >= id | sync_wait;
 
 	//auto r = pure(4) | sync_wait;
 	//auto r = pure(5) >= purez | sync_wait;
-	//std::println("Final result: {}", r);
+	std::println("Final result: {}", r);
 	return 0;
 }

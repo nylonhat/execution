@@ -76,7 +76,25 @@ auto start = [](Op auto&& op, OpHandle op_handle) {
 };
 
 
+template<class R>
+struct NoopOp {
+	[[no_unique_address]] R recvr;
 
+	auto start(OpHandle op_handle){
+		recvr.set_value(op_handle, 0);
+	}
+};
 
+struct NoopSender {
+	using value_t = std::tuple<int>;
+
+	auto connect(auto recvr){
+		return NoopOp{recvr};
+	}
+};
+
+auto noop = [](){
+	return NoopSender{};
+};
 
 #endif//SENDER_H

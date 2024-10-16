@@ -1,7 +1,7 @@
 #ifndef REPEAT_H
 #define REPEAT_H
 
-
+#include "timer.h"
 #include "sender.h"
 #include <iostream>
 
@@ -30,19 +30,22 @@ struct RepeatOp {
 	[[no_unique_address]] S sender;
 
 	std::size_t count = 0;
+	Timer timer = {};
+	static constexpr size_t max = 100'000'000;
 
 	RepeatOp(S sender, ER end_recvr)
 		: end_recvr{end_recvr}
 		, sender{sender}
-	{}
+	{timer.start();}
 	
 	auto start(OpHandle op_handle){
-		if(count < 1'000'000){
+		if(count < max){
 			count++;
 			new (&op) OP (::connect(sender, RR{}));
 			return ::start(op, op_handle);
 		}
-		return end_recvr.set_value(op_handle, count);
+		timer.stop();
+		return end_recvr.set_value(op_handle, timer.count()/max);
 	}
 
 };

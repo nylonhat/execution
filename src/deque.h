@@ -38,7 +38,7 @@ public:
 		stack_id++;
 		return true;
 	}
-
+	
 	bool try_local_pop(T& data){
 		Cell& cell = buffer[(stack_id - 1) & buffer_mask];
 		
@@ -49,6 +49,38 @@ public:
 			return false;
 		}
 
+		//Try to race for last item
+		size_t old_steal = stack_id - 1;
+		if(steal_id.compare_exchange_strong(old_steal, stack_id, m::relaxed)){
+			//Can take last item as if a stealer
+			data = cell.data;
+			cell.sequence.store(old_steal + buffer_size, m::release);
+			return true;
+		}
+		
+		if(old_steal == stack_id){
+			//Lost race for last item; deque now empty
+			//Note: stealer will correct the cell sequence
+			return false;
+		}
+	
+		//Item was not the last; free to take
+		data = cell.data;
+		stack_id--;
+		return true;
+	}
+	
+	bool try_local_pop2(T& data){
+		Cell& cell = buffer[(stack_id - 1) & buffer_mask];
+		
+		//Check if deque is emtpy
+		size_t seq = cell.sequence.exchange(stack_id -1, m::acq_rel);
+		if(seq != stack_id){
+			cell.sequence.store(seq, m::release);
+			//Deque is empty
+			return false;
+		}
+		
 		//Try to race for last item
 		size_t old_steal = stack_id - 1;
 		if(steal_id.compare_exchange_strong(old_steal, stack_id, m::relaxed)){
@@ -114,6 +146,7 @@ private:
 	size_t const buffer_mask = buffer_size - 1;
 	alignas(64) size_t stack_id = 0;
 	alignas(64) std::atomic<size_t> steal_id = 0;
+	size_t fast_steal = 0;
 
 	Deque(Deque const&) = delete;
 	void operator= (Deque const&) = delete;
