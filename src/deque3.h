@@ -10,10 +10,27 @@
 
 template<typename T, size_t buffer_size>
 requires
-	(buffer_size > 1) &&
 	(std::has_single_bit(buffer_size)) //power of 2
 
 class Deque{
+private:
+	struct alignas(64) Cell{
+		std::atomic<size_t> steal_sequence;
+		std::atomic<size_t> push_sequence;
+		T data;
+	};
+	
+	std::array<Cell, buffer_size> buffer;
+	size_t const buffer_mask = buffer_size - 1;
+	alignas(64) size_t stack_id = 0;
+	alignas(64) std::atomic<size_t> steal_id = 0;
+
+	Deque(Deque const&) = delete;
+	void operator= (Deque const&) = delete;
+
+	using m = std::memory_order;
+
+
 public:
 	Deque(){
 		for(size_t i = 0; i < buffer_size; i++){
@@ -67,7 +84,7 @@ public:
 			cell->steal_sequence.compare_exchange_strong(test_steal, old_steal + 1 + buffer_mask, m::acq_rel);
 
 			//Circular Difference
-			auto diff = (intptr_t)test_steal - (intptr_t)(old_steal+1);
+			auto diff = std::bit_cast<ptrdiff_t>(test_steal) - std::bit_cast<ptrdiff_t>(old_steal + 1);
 			
 			if(diff < 0){
 				//Deque empty
@@ -94,22 +111,6 @@ public:
 		return true;
 	}
 
-private:
-	struct alignas(64) Cell{
-		std::atomic<size_t> steal_sequence;
-		std::atomic<size_t> push_sequence;
-		T data;
-	};
-	
-	std::array<Cell, buffer_size> buffer;
-	size_t const buffer_mask = buffer_size - 1;
-	alignas(64) size_t stack_id = 0;
-	alignas(64) std::atomic<size_t> steal_id = 0;
-
-	Deque(Deque const&) = delete;
-	void operator= (Deque const&) = delete;
-
-	using m = std::memory_order;
 };
 
 #endif

@@ -31,7 +31,7 @@ struct RepeatOp {
 
 	std::size_t count = 0;
 	Timer timer = {};
-	static constexpr size_t max = 100'000'000;
+	static constexpr size_t max = 1'000'000'000;
 
 	RepeatOp(S sender, ER end_recvr)
 		: end_recvr{end_recvr}
