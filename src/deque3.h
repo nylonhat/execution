@@ -40,19 +40,19 @@ public:
 		}
 	}
 	
-	Deque(const Deque&)				= delete;
-	Deque(Deque&&)					= delete;
-	Deque& operator=(const Deque&)	= delete;
-	Deque& operator=(Deque&&)		= delete;
+	Deque(const Deque&)            = delete;
+	Deque(Deque&&)                 = delete;
+	Deque& operator=(const Deque&) = delete;
+	Deque& operator=(Deque&&)      = delete;
 	
 	~Deque() = default;
 	
-	bool try_local_push(T const& data){
+	bool try_local_push(const T& data){
 		auto& cell = buffer[stack_index & buffer_mask];
 		auto stack_tag = cell.stack_tag.load(m::acquire);
 		
-		//Deque is full
 		if(stack_tag != stack_index){
+			//Deque is full
 			return false;
 		}
 		
