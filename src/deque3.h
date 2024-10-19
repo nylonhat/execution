@@ -5,12 +5,11 @@
 #include <atomic>
 #include <bit>
 
-/** 
- * @brief Lock free Bounded Workstealing Deque
+/** @brief Lock free Bounded Workstealing Deque
  *
  * One end of the deque behaves as a LIFO stack for a single
- * producer / consumer. The other end behaves like a FIFO
- * queue for multiple consumers.
+ * producer / consumer. The other end behaves like a FIFO queue
+ * for multiple consumers.
  */
 template<typename T, size_t buffer_size>
 requires
@@ -52,11 +51,12 @@ public:
 		auto& cell = buffer[stack_index & buffer_mask];
 		auto stack_tag = cell.stack_tag.load(m::acquire);
 		
+		//Deque is full
 		if(stack_tag != stack_index){
-			//Deque is full
 			return false;
 		}
-
+		
+		//Push item
 		cell.data = data;
 		cell.stack_tag.store(stack_index + 1, m::relaxed);
 		cell.steal_tag.store(stack_index + 1, m::release);
@@ -68,8 +68,12 @@ public:
 		auto& cell = buffer[(stack_index - 1) & buffer_mask];
 		
 		auto test_tag = stack_index;
-		if(!cell.steal_tag.compare_exchange_strong(test_tag, stack_index - 1, m::acq_rel)){
-			//Deque is empty
+		cell.steal_tag.compare_exchange_strong(
+			test_tag, stack_index - 1, m::acq_rel
+		);
+		
+		if(test_tag != stack_index){
+			//Deque is full
 			return false;
 		}
 		
@@ -88,27 +92,32 @@ public:
 			
 			//Race to steal item
 			auto test_tag = steal_key;
-			cell.steal_tag.compare_exchange_strong(test_tag, next_tag, m::acq_rel);
+			cell.steal_tag.compare_exchange_strong(
+				test_tag, next_tag, m::acq_rel
+			);
 
 			//Circular Difference
-			auto diff = std::bit_cast<ptrdiff_t>(test_tag) 
-						- std::bit_cast<ptrdiff_t>(steal_key);
-			
-			if(diff < 0){
-				//Deque empty
+			auto wrap_tag = std::bit_cast<ptrdiff_t>(test_tag);
+			auto wrap_key = std::bit_cast<ptrdiff_t>(steal_key); 
+			auto difference = wrap_tag - wrap_key;
+		
+			if(difference < 0){
+				//Deque is empty
 				return false;
 			}
 
-			//Stealers won against popper. One stealer will update the steal id.
+			//A stealer won. One stealer must update steal_index
 			test_tag = steal_now;
-			steal_index.compare_exchange_strong(test_tag, steal_key, m::acq_rel);
-			
-			if(diff > 0){
-				//Lagging behind other stealers; Retry
+			steal_index.compare_exchange_strong(
+				test_tag, steal_key, m::acq_rel
+			);
+		
+			if(difference > 0){
+				//We lost but there maybe more to steal. 
 				continue;
 			}
 
-			//Won the race;
+			//We won the race!
 			data = cell.data;
 			cell.stack_tag.store(next_tag, m::release);
 			return true;
