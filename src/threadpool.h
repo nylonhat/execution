@@ -34,6 +34,7 @@ private:
 
 public:
 	OpHandle schedule(OpHandle task);
+	bool try_schedule(OpHandle task);
 	
 
 };

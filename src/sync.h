@@ -10,10 +10,10 @@ struct SyncRecvr {
     T* value;
     std::binary_semaphore* flag;
 
-    auto set_value(OpHandle op_handle, auto v){
+    auto set_value(auto&& cont, auto v){
         *value = v;
         flag->release();
-		return op_handle.start({});
+		return ::start(cont, Noop{});
     }
 };
 
@@ -26,7 +26,7 @@ auto sync_wait = []<class S>(S sender){
     auto op = ::connect(sender, sync_recvr);
 	std::println("final op size: {} bytes", sizeof(op));
 	
-	::start(op, {});
+	::start(op, Noop{});
 
     flag.acquire();
     return value;

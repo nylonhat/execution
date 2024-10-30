@@ -68,19 +68,22 @@ OpHandle Threadpool::schedule(OpHandle task){
 	//return {task};
 	//thread does not belong to this pool
 	if(my_pool != this){
-		if(master_queue.try_enqueue(task)){
-			return {};
-		}
-		return {task};
+		return master_queue.try_enqueue(task) ? OpHandle{} : task;
 	}
 
 	//enqueue task into threads own queue
-	if(queues.at(worker_id).try_local_push(task)){
-		return {};
-	}
-	return {task};
+	return queues.at(worker_id).try_local_push(task) ? OpHandle{} : task;
 }
 
 
+bool Threadpool::try_schedule(OpHandle task){
+	//return {task};
+	//thread does not belong to this pool
+	if(my_pool != this){
+		return master_queue.try_enqueue(task);
+	}
 
+	//enqueue task into threads own queue
+	return queues.at(worker_id).try_local_push(task);
+}
 

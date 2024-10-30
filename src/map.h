@@ -8,8 +8,9 @@ struct MapRecvr {
 	[[no_unique_address]] ER end_recvr;
     [[no_unique_address]] F func;
 
-	void set_value(OpHandle op_handle, auto... args){
-		return ::set_value(end_recvr, op_handle, func(args...));
+	template<class Cont>
+	void set_value(Cont&& cont, auto... args){
+		return ::set_value(end_recvr, std::forward<Cont>(cont), func(args...));
 	}
 };        
 

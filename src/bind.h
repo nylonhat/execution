@@ -8,15 +8,15 @@ struct BindRecvr {
 	[[no_unique_address]] R end_recvr;
 	[[no_unique_address]] F mfunc;
 
-	template<class... Args>
-	auto set_value(OpHandle op_handle, Args... args){
+	template<class Cont, class... Args>
+	auto set_value(Cont&& cont, Args... args){
 		using S2 = std::invoke_result_t<F, Args...>;
 		using OP2 = connect_t<S2, R>;
 		
 		S2 sender2 = std::invoke(mfunc, args...);
 		OP2* op2_p = reinterpret_cast<OP2*>(this);
 		OP2& op2 = *new (op2_p) OP2 (::connect(sender2, end_recvr));
-		::start(op2, op_handle);
+		::start(op2, std::forward<Cont>(cont));
 	}
 };
 
@@ -40,8 +40,9 @@ struct BindOp {
 		: op1{::connect(sender1, BR{end_recvr, mfunc})}
 	{}
 
-	auto start(OpHandle op_handle){
-		::start(op1, op_handle);
+	template<class Cont>
+	auto start(Cont&& cont){
+		::start(op1, std::forward<Cont>(cont));
 	}
 };
 

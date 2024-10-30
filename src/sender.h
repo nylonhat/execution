@@ -37,11 +37,13 @@ auto operator | (Sender auto value, auto func){
 }
 
 
-struct OpHandle;
+struct Noop {
+	auto start(auto&& cont){}
+};
 
 template<typename O>
-concept Op = requires(O op, OpHandle op_handle){
-	{op.start(op_handle)} -> std::same_as<void>;
+concept Op = requires(O op){
+	{op.start(Noop{})} -> std::same_as<void>;
 };
 
 
@@ -60,6 +62,8 @@ struct OpHandle {
 		}} 
 	{}
 
+	OpHandle(Noop noop){}
+
 	OpHandle(OpHandle& rhs) = default;
 
 	void start(OpHandle op_handle){
@@ -67,34 +71,12 @@ struct OpHandle {
 	}
 };
 
-auto set_value = [](auto&& recvr, OpHandle op_handle, auto&&... args){
-	recvr.set_value(op_handle, args...);
+auto set_value = [](auto&& recvr, auto&& cont, auto&&... args){
+	recvr.set_value(std::forward<decltype(cont)>(cont), args...);
 };
 
-auto start = [](Op auto&& op, OpHandle op_handle) {
-	op.start(op_handle);
-};
-
-
-template<class R>
-struct NoopOp {
-	[[no_unique_address]] R recvr;
-
-	auto start(OpHandle op_handle){
-		recvr.set_value(op_handle, 0);
-	}
-};
-
-struct NoopSender {
-	using value_t = std::tuple<int>;
-
-	auto connect(auto recvr){
-		return NoopOp{recvr};
-	}
-};
-
-auto noop = [](){
-	return NoopSender{};
+auto start = [](Op auto&& op, auto&& cont) {
+	op.start(std::forward<decltype(cont)>(cont));
 };
 
 #endif//SENDER_H

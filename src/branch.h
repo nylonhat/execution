@@ -7,7 +7,8 @@
 
 template<typename BOP>
 struct BranchRecvr1 {
-	auto set_value(OpHandle op_handle, auto v1){
+	
+	auto set_value(auto&& cont, auto v1){
 		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, op1);
 		auto& bop = *reinterpret_cast<BOP*>(byte_p);
 		
@@ -15,30 +16,55 @@ struct BranchRecvr1 {
 		auto old = bop.counter.fetch_sub(1);
 
 		if(old == 0){
-			return bop.end_recvr.set_value(bop.cont, bop.r1, bop.r2);
+			return bop.end_recvr.set_value(std::forward<decltype(cont)>(cont), bop.r1, bop.r2);
 		}
 
-		return op_handle.start({});
+		return ::start(cont, Noop{});
 	}
 };
 
 template<typename BOP>
 struct BranchRecvr2 {
-	auto set_value(OpHandle op_handle, auto v2){
+
+	auto set_value(auto&& cont, auto v2){
 		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, op2);
 		auto& bop = *reinterpret_cast<BOP*>(byte_p);
-		
+
 		bop.r2 = v2;
 		auto old = bop.counter.fetch_sub(1);
 
 		if(old == 0){
-			return bop.end_recvr.set_value(bop.cont, bop.r1, bop.r2);
+			return bop.end_recvr.set_value(std::forward<decltype(cont)>(cont), bop.r1, bop.r2);
 		}
 
-		return op_handle.start({});
+		return start(cont, Noop{});
 	}
 };
 
+template<class BOP>
+struct Loop1 {
+
+	auto start(auto&&){
+		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, loop1);
+		auto& bop = *reinterpret_cast<BOP*>(byte_p);
+
+		auto shortcut = bop.scheduler.schedule(bop.loop2);
+		
+		return ::start(bop.op1, std::move(shortcut));
+	}
+};
+
+template<class BOP>
+struct Loop2 {
+
+	auto start(auto&&){
+		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, loop2);
+		auto& bop = *reinterpret_cast<BOP*>(byte_p);
+
+		auto cont_copy = bop.cont;
+		::start(bop.op2, std::move(cont_copy));
+	}
+};
 
 template<Sender S1, Sender S2, typename ER>
 struct BranchOp {
@@ -55,10 +81,8 @@ struct BranchOp {
 
 	[[no_unique_address]] ER end_recvr;
 	
-	union {
-		SchedulerHandle scheduler;
-		OpHandle cont;
-	};
+	SchedulerHandle scheduler;
+	OpHandle cont;
 
 	union {
 		OP1 op1;
@@ -70,6 +94,9 @@ struct BranchOp {
 		R2 r2;
 	};
 
+	[[no_unique_address]] Loop1<SELF> loop1 = {};
+	[[no_unique_address]] Loop2<SELF> loop2 = {};
+
 	std::atomic<std::int8_t> counter = 1;
 
 	BranchOp(SchedulerHandle scheduler, S1 sender1, S2 sender2, ER end_recvr)
@@ -79,11 +106,16 @@ struct BranchOp {
 		, op2{::connect(sender2, BR2{})}
 	{}
 
-	auto start(OpHandle op_handle){
+	auto start(auto&& continuation){
 		//scheduler.schedule({});
-		auto shortcut = scheduler.schedule(op2);
-		cont = op_handle;
-		::start(op1, shortcut);
+		//auto shortcut = scheduler.schedule(op2);
+		//cont = op_handle;
+		//::start(op1, shortcut);
+		
+		cont = continuation;
+		auto shortcut = scheduler.schedule(loop1);
+		return ::start(shortcut, Noop{});
+		//return ::start(loop1, Noop{});
 	}
 
 };

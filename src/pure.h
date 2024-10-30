@@ -8,8 +8,8 @@ struct PureOp {
     [[no_unique_address]] R recvr;
     T value;
 
-    void start(OpHandle op_handle){
-        recvr.set_value(op_handle, value);
+    void start(auto&& cont){
+        ::set_value(recvr, std::forward<decltype(cont)>(cont), value);
     }
 };
 
@@ -35,8 +35,8 @@ struct Pure2Op {
     A a;
     B b;
 
-    auto start(OpHandle op_handle){
-        recvr.set_value(op_handle, a, b);
+    auto start(auto&& cont){
+        ::set_value(recvr, std::forward<decltype(cont)>(cont), a, b);
     }
 };
 
