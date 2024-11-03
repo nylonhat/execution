@@ -28,12 +28,12 @@ void Threadpool::work(){
 		OpHandle task;
 		//dequeue from threads own queue first 
 		if(queues.at(worker_id).try_local_pop(task)){
-			task.start({});
+			task.start();
 			continue;
 		}
 		
 		if(master_queue.try_dequeue(task)){
-			task.start({});
+			task.start();
 			continue;
 		}
 	
@@ -44,7 +44,7 @@ void Threadpool::work(){
 			int random_index = distribution(random_generator);
 		
 			if(queues.at(random_index).try_steal(task)){
-				task.start({});
+				task.start();
 				backoff.reset();
 				break;
 			}

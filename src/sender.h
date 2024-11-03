@@ -37,46 +37,48 @@ auto operator | (Sender auto value, auto func){
 }
 
 
-struct Noop {
-	auto start(auto&& cont){}
-};
-
 template<typename O>
 concept Op = requires(O op){
-	{op.start(Noop{})} -> std::same_as<void>;
+	{op.start()} -> std::same_as<void>;
 };
 
 
 struct OpHandle {
 	void* type_ptr = nullptr;
-	void (*start_ptr)(void*, OpHandle) = [](void*, OpHandle){};
+	void (*start_ptr)(void*) = [](void*){};
 
 	OpHandle() = default;
 	
 	template<class O>
 	OpHandle(O& op)
 		: type_ptr{std::addressof(op)}
-		, start_ptr{[](void* type_ptr, OpHandle op_handle){
+		, start_ptr{[](void* type_ptr){
 			O& op = *static_cast<O*>(type_ptr);
-			return op.start(op_handle);
+			return op.start();
 		}} 
 	{}
 
-	OpHandle(Noop noop){}
-
 	OpHandle(OpHandle& rhs) = default;
 
-	void start(OpHandle op_handle){
-		return start_ptr(type_ptr, op_handle);
+	void start(){
+		return start_ptr(type_ptr);
 	}
 };
 
-auto set_value = [](auto&& recvr, auto&& cont, auto&&... args){
-	recvr.set_value(std::forward<decltype(cont)>(cont), args...);
+auto set_value = [](auto& recvr, auto&&... cont, auto&&... args){
+	recvr.template set_value<decltype(cont)...>(std::forward<decltype(cont)>(cont)..., std::forward<decltype(args)>(args)...);
 };
 
-auto start = [](Op auto&& op, auto&& cont) {
-	op.start(std::forward<decltype(cont)>(cont));
+
+struct start_cpo {
+    auto operator()(){}
+
+    auto operator()(Op auto& op, auto&&... cont){
+        op.start(std::forward<decltype(cont)>(cont)...);
+    }
 };
+
+static start_cpo start{};
+
 
 #endif//SENDER_H

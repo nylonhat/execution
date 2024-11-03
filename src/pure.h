@@ -8,8 +8,8 @@ struct PureOp {
     [[no_unique_address]] R recvr;
     T value;
 
-    void start(auto&& cont){
-        ::set_value(recvr, std::forward<decltype(cont)>(cont), value);
+    void start(auto&&... cont){
+        ::set_value.operator() <decltype(recvr), decltype(cont)...> (recvr, std::forward<decltype(cont)>(cont)..., value);
     }
 };
 
@@ -29,14 +29,15 @@ auto pure = []<class V>(V value){
     return PureSender<V>{value};
 };
 
+
 template<class R, class A, class B>
 struct Pure2Op {
     [[no_unique_address]] R recvr;
     A a;
     B b;
 
-    auto start(auto&& cont){
-        ::set_value(recvr, std::forward<decltype(cont)>(cont), a, b);
+    void start(auto&&... cont){
+        ::set_value.operator() <decltype(recvr), decltype(cont)...> (recvr, std::forward<decltype(cont)>(cont)..., a, b);
     }
 };
 

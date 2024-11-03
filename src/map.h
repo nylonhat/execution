@@ -8,9 +8,9 @@ struct MapRecvr {
 	[[no_unique_address]] ER end_recvr;
     [[no_unique_address]] F func;
 
-	template<class Cont>
-	void set_value(Cont&& cont, auto... args){
-		return ::set_value(end_recvr, std::forward<Cont>(cont), func(args...));
+
+	void set_value(auto&&... cont, auto... args){
+		return ::set_value.operator()<decltype(end_recvr), decltype(cont)...>(end_recvr, std::forward<decltype(cont)>(cont)..., func(args...));
 	}
 };        
 
@@ -36,6 +36,5 @@ auto map = [](Sender auto sender, auto func){
 auto operator > (Sender auto sender, auto func){
     return map(sender, func);
 }
-
 
 #endif//MAP_H

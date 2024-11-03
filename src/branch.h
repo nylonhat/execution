@@ -5,202 +5,152 @@
 #include "sender.h"
 #include "scheduler.h"
 
-template<typename BOP>
-struct BranchRecvr1 {
+template<size_t Index, class T>
+constexpr auto& get_result(T& nested_op){
+    if constexpr (T::index == Index){
+        return nested_op.result;
+    }else{
+        return get_result<Index>(nested_op.next);
+    }
+}
+
+template<size_t Index, class T>
+consteval auto get_offset(){
+    if constexpr (T::index == Index){
+        return 0;
+    }else{
+        return offsetof(T, next) + get_offset<Index, typename T::Next>();
+    }
+}
+
+template<size_t Index, class BOP, class... Sender>
+struct NestedOp;
+
+
+template<size_t Index, class BaseOp, class Sender, class... Senders>
+struct NestedOp <Index, BaseOp, Sender, Senders...> {
+    struct Empty{};
+
+    using Next = std::conditional_t<Index == BaseOp::size-1, Empty , NestedOp<Index+1, BaseOp, Senders...> >;
+
+    using Recvr =  BaseOp::template IndexRecvr<Index>;
+    using Op = connect_t<Sender, Recvr>;
+    using Result = single_value_t<Sender>;
+
+    constexpr static size_t index = Index;
+
+    union {
+        Sender sender;
+        Op op;
+        Result result;
+    };
+
+    [[no_unique_address]] Next next;
+
+    NestedOp(Sender sender, Senders... senders)
+        : sender{sender}
+        , next{senders...}
+    {}
+    
+    auto start(auto&&... cont){
+        auto* offset_ptr = reinterpret_cast<std::byte*>(this) - offsetof(BaseOp, tuple) - get_offset<Index, typename BaseOp::Tuple>();
+		auto& base_op = *reinterpret_cast<BaseOp*>(offset_ptr);
+
+        new (&op) Op (::connect(sender, Recvr{}));
+
+        if constexpr(Index == BaseOp::size-1){
+            return ::start(op, std::forward<decltype(cont)>(cont)...);
+        }else{
+            if(base_op.scheduler.try_schedule(next)){
+                return ::start(op, std::forward<decltype(cont)>(cont)...);
+            }
+
+            return ::start(op, next, std::forward<decltype(cont)>(cont)...); 
+        }
+    }
+    
+};
+
+template<class BOP, class... Sender>
+using OpTuple = NestedOp<0, BOP, Sender...>;
+
+
+template<size_t Index, class BaseOp>
+struct BranchRecvr {
 	
-	auto set_value(auto&& cont, auto v1){
-		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, op1);
-		auto& bop = *reinterpret_cast<BOP*>(byte_p);
+    template<class... Cont>
+	auto set_value(Cont&&... cont, auto value){
+        
+		auto* offset_ptr = reinterpret_cast<std::byte*>(this) - offsetof(BaseOp, tuple) - get_offset<Index, typename BaseOp::Tuple>();
+		auto& base_op = *reinterpret_cast<BaseOp*>(offset_ptr);
 		
-		bop.r1 = v1;
-		auto old = bop.counter.fetch_sub(1);
+        get_result<Index>(base_op.tuple) = value;
+		
+        auto old = base_op.counter.fetch_sub(1);
 
 		if(old == 0){
-			return bop.end_recvr.set_value(std::forward<decltype(cont)>(cont), bop.r1, bop.r2);
+			return ::set_value.operator()<typename BaseOp::ER, Cont...>(base_op.end_recvr, std::forward<Cont>(cont)..., get_result<0>(base_op.tuple), get_result<1>(base_op.tuple));
 		}
 
-		return ::start(cont, Noop{});
+		return ::start(std::forward<decltype(cont)>(cont)...);
+        
 	}
 };
 
-template<typename BOP>
-struct BranchRecvr2 {
 
-	auto set_value(auto&& cont, auto v2){
-		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, op2);
-		auto& bop = *reinterpret_cast<BOP*>(byte_p);
-
-		bop.r2 = v2;
-		auto old = bop.counter.fetch_sub(1);
-
-		if(old == 0){
-			return bop.end_recvr.set_value(std::forward<decltype(cont)>(cont), bop.r1, bop.r2);
-		}
-
-		return start(cont, Noop{});
-	}
-};
-
-template<class BOP>
-struct Loop1 {
-
-	auto start(auto&&){
-		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, loop1);
-		auto& bop = *reinterpret_cast<BOP*>(byte_p);
-
-		auto shortcut = bop.scheduler.schedule(bop.loop2);
-		
-		return ::start(bop.op1, std::move(shortcut));
-	}
-};
-
-template<class BOP>
-struct Loop2 {
-
-	auto start(auto&&){
-		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BOP, loop2);
-		auto& bop = *reinterpret_cast<BOP*>(byte_p);
-
-		auto cont_copy = bop.cont;
-		::start(bop.op2, std::move(cont_copy));
-	}
-};
-
-template<Sender S1, Sender S2, typename ER>
+template<Scheduler Sched, typename EndRecvr, Sender... Senders>
 struct BranchOp {
-	using R1 = single_value_t<S1>;
-	using R2 = single_value_t<S2>;
 
-	using SELF = BranchOp<S1, S2, ER>;
+	using Self = BranchOp<Sched, EndRecvr, Senders...>;
+    using ER = EndRecvr;
+    template<size_t Index>
+    using IndexRecvr = BranchRecvr<Index, Self>;
+    using Tuple = OpTuple<Self, Senders...>;
+    static constexpr size_t size = sizeof...(Senders);
+
+	[[no_unique_address]] EndRecvr end_recvr;
 	
-	using BR1 = BranchRecvr1<SELF>;
-	using OP1 = connect_t<S1, BR1>;
-	using BR2 = BranchRecvr2<SELF>;
-	using OP2 = connect_t<S2, BR2>;
+	Sched scheduler;
 
-
-	[[no_unique_address]] ER end_recvr;
-	
-	SchedulerHandle scheduler;
-	OpHandle cont;
-
-	union {
-		OP1 op1;
-		R1 r1;
-	};
-
-	union {
-		OP2 op2;
-		R2 r2;
-	};
-
-	[[no_unique_address]] Loop1<SELF> loop1 = {};
-	[[no_unique_address]] Loop2<SELF> loop2 = {};
+    union{
+        Tuple tuple;
+    };
 
 	std::atomic<std::int8_t> counter = 1;
 
-	BranchOp(SchedulerHandle scheduler, S1 sender1, S2 sender2, ER end_recvr)
+	BranchOp(Sched scheduler, EndRecvr end_recvr, Senders... senders)
 		: end_recvr{end_recvr}
 		, scheduler{scheduler}
-		, op1{::connect(sender1, BR1{})}
-		, op2{::connect(sender2, BR2{})}
+        , tuple{{senders}...}
 	{}
 
-	auto start(auto&& continuation){
-		//scheduler.schedule({});
-		//auto shortcut = scheduler.schedule(op2);
-		//cont = op_handle;
-		//::start(op1, shortcut);
+	auto start(auto&&... cont){
 		
-		cont = continuation;
-		auto shortcut = scheduler.schedule(loop1);
-		return ::start(shortcut, Noop{});
-		//return ::start(loop1, Noop{});
+        //if(scheduler.try_schedule(tuple)){
+           //return ::start(std::forward<decltype(cont)>(cont)...);
+        //}
+
+        return ::start(tuple, std::forward<decltype(cont)>(cont)...);
 	}
 
 };
 
-template<Sender S1, Sender S2>
+template<Scheduler Sched, Sender S1, Sender S2>
 struct BranchSender {
 	using value_t = values_join_t<S1, S2>;
 
-	[[no_unique_address]] SchedulerHandle scheduler;
+	Sched scheduler;
 	[[no_unique_address]] S1 sender1;
 	[[no_unique_address]] S2 sender2;
-	
+		
 	template<typename ER>
 	auto connect(ER end_recvr){
-		return BranchOp{scheduler, sender1, sender2, end_recvr};
+		return BranchOp{scheduler, end_recvr, sender1, sender2};
 	}
 };
 
 auto branch = [](Scheduler auto& scheduler, Sender auto sender1, Sender auto sender2){
-	return BranchSender{scheduler, sender1, sender2};
+	return BranchSender{SchedulerHandle{scheduler}, sender1, sender2};
 };
-
-/*
-#include <vector>
-
-
-
-template<typename SR, typename ER>
-struct BranchRangeOp {
-	using SENDER_T = SR::range_value_t;
-	using RES_T = SENDER_T::value_t;
-	using SIZE = SR::size; 
-	using SELF = BranchRangeOp<SR, ER>;
-	
-	using OP = connect_t<SENDER_T, ???>;
-
-
-	[[no_unique_address]] ER end_recvr;
-
-	std::array<OP> ops;
-	std::array<RES_T> results;
-
-	SchedulerHandle scheduler;
-	int schedule_count = 0;
-	std::atomic<std::int8_t> counter = SIZE -1;
-	
-
-	BranchRangeOp(SchedulerHandle scheduler, SR sender_range, ER end_recvr)
-		: end_recvr{end_recvr}
-		, scheduler{scheduler}
-	{
-	}
-
-
-	auto start(){
-		//construct ops[schedule_count];
-		int idx = schedule_count++;
-		scheduler.schedule(*this);
-		::start(ops.at(idx));
-	}
-
-};
-
-
-
-
-template<typename SR>
-struct BranchRangeSender {
-	using value_t = std::tuple<std::array<typename SR::range_value_t, SR::range_size_t>>;
-
-	[[no_unique_address]] SchedulerHandle scheduler;
-	[[no_unique_address]] SR sender_range;
-	
-	template<typename ER>
-	auto connect(ER end_recvr){
-		return BranchRangeOp{scheduler, sender_range, end_recvr};
-	}
-};
-
-
-auto branch_range = [](Scheduler auto& scheduler, auto sender_range){
-	return BranchRangeSender{scheduler, sender_range};
-};
-
-*/
-
 
 #endif//BRANCH_H

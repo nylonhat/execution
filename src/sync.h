@@ -5,15 +5,17 @@
 #include <print>
 #include "sender.h"
 
+
 template<class T>
 struct SyncRecvr {
     T* value;
     std::binary_semaphore* flag;
 
-    auto set_value(auto&& cont, auto v){
+    auto set_value(auto&&... cont, auto v){
         *value = v;
+        ::start(std::forward<decltype(cont)>(cont)...);
         flag->release();
-		return ::start(cont, Noop{});
+		return;
     }
 };
 
@@ -24,9 +26,9 @@ auto sync_wait = []<class S>(S sender){
     
 	auto sync_recvr = SyncRecvr{&value, &flag};
     auto op = ::connect(sender, sync_recvr);
-	std::println("final op size: {} bytes", sizeof(op));
+	//std::println("final op size: {} bytes", sizeof(op));
 	
-	::start(op, Noop{});
+	::start(op);
 
     flag.acquire();
     return value;
