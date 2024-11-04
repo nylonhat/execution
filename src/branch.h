@@ -23,15 +23,12 @@ consteval auto get_offset(){
     }
 }
 
-template<size_t Index, class BOP, class... Sender>
-struct NestedOp;
-
-
-template<size_t Index, class BaseOp, class Sender, class... Senders>
-struct NestedOp <Index, BaseOp, Sender, Senders...> {
+template<size_t Index, class BaseOp>
+struct NestedOp {
+    using Sender = std::tuple_element_t<Index, typename BaseOp::SenderTypeList>;
     struct Empty{};
 
-    using Next = std::conditional_t<Index == BaseOp::size-1, Empty , NestedOp<Index+1, BaseOp, Senders...> >;
+    using Next = std::conditional_t<Index == BaseOp::size-1, Empty , NestedOp<Index+1, BaseOp> >;
 
     using Recvr =  BaseOp::template IndexRecvr<Index>;
     using Op = connect_t<Sender, Recvr>;
@@ -47,23 +44,23 @@ struct NestedOp <Index, BaseOp, Sender, Senders...> {
 
     [[no_unique_address]] Next next;
 
-    NestedOp(Sender sender, Senders... senders)
+    NestedOp(Sender sender, auto... senders)
         : sender{sender}
         , next{senders...}
     {}
     
     auto start(auto&&... cont){
-        auto* offset_ptr = reinterpret_cast<std::byte*>(this) - offsetof(BaseOp, tuple) - get_offset<Index, typename BaseOp::Tuple>();
-		auto& base_op = *reinterpret_cast<BaseOp*>(offset_ptr);
+        //auto* offset_ptr = reinterpret_cast<std::byte*>(this) - offsetof(BaseOp, tuple) - get_offset<Index, typename BaseOp::Tuple>();
+		//auto& base_op = *reinterpret_cast<BaseOp*>(offset_ptr);
 
         new (&op) Op (::connect(sender, Recvr{}));
 
         if constexpr(Index == BaseOp::size-1){
             return ::start(op, std::forward<decltype(cont)>(cont)...);
         }else{
-            if(base_op.scheduler.try_schedule(next)){
-                return ::start(op, std::forward<decltype(cont)>(cont)...);
-            }
+            //if(base_op.scheduler.try_schedule(next)){
+            //    return ::start(op, std::forward<decltype(cont)>(cont)...);
+           // }
 
             return ::start(op, next, std::forward<decltype(cont)>(cont)...); 
         }
@@ -71,15 +68,14 @@ struct NestedOp <Index, BaseOp, Sender, Senders...> {
     
 };
 
-template<class BOP, class... Sender>
-using OpTuple = NestedOp<0, BOP, Sender...>;
+template<class BOP>
+using OpTuple = NestedOp<0, BOP>;
 
 
 template<size_t Index, class BaseOp>
 struct BranchRecvr {
 	
-    template<class... Cont>
-	auto set_value(Cont&&... cont, auto value){
+	auto set_value(auto&&... cont, auto value){
         
 		auto* offset_ptr = reinterpret_cast<std::byte*>(this) - offsetof(BaseOp, tuple) - get_offset<Index, typename BaseOp::Tuple>();
 		auto& base_op = *reinterpret_cast<BaseOp*>(offset_ptr);
@@ -88,8 +84,21 @@ struct BranchRecvr {
 		
         auto old = base_op.counter.fetch_sub(1);
 
-		if(old == 0){
-			return ::set_value.operator()<typename BaseOp::ER, Cont...>(base_op.end_recvr, std::forward<Cont>(cont)..., get_result<0>(base_op.tuple), get_result<1>(base_op.tuple));
+        if constexpr(sizeof...(cont) > 0){
+            using FirstCont = std::tuple_element_t<0, std::tuple<std::remove_reference_t<decltype(cont)>...>>;
+            if constexpr(!std::same_as<FirstCont, typename BaseOp::template IndexTuple<Index+1>>){
+                
+                if(old == 0){
+    			    return ::set_value.operator()<decltype(base_op.end_recvr), decltype(cont)...>(base_op.end_recvr, std::forward<decltype(cont)>(cont)..., get_result<0>(base_op.tuple), get_result<1>(base_op.tuple));
+    		    }
+            }
+        }  
+
+            
+        if constexpr(sizeof...(cont) == 0){
+		    if(old == 0){
+			    return ::set_value.operator()<decltype(base_op.end_recvr), decltype(cont)...>(base_op.end_recvr, std::forward<decltype(cont)>(cont)..., get_result<0>(base_op.tuple), get_result<1>(base_op.tuple));
+		    }
 		}
 
 		return ::start(std::forward<decltype(cont)>(cont)...);
@@ -105,8 +114,12 @@ struct BranchOp {
     using ER = EndRecvr;
     template<size_t Index>
     using IndexRecvr = BranchRecvr<Index, Self>;
-    using Tuple = OpTuple<Self, Senders...>;
+    template<size_t Index>
+    using IndexTuple = NestedOp<Index, Self>;
+    using Tuple = OpTuple<Self>;
+    using SenderTypeList = std::tuple<Senders...>;
     static constexpr size_t size = sizeof...(Senders);
+
 
 	[[no_unique_address]] EndRecvr end_recvr;
 	
@@ -121,7 +134,7 @@ struct BranchOp {
 	BranchOp(Sched scheduler, EndRecvr end_recvr, Senders... senders)
 		: end_recvr{end_recvr}
 		, scheduler{scheduler}
-        , tuple{{senders}...}
+        , tuple{senders...}
 	{}
 
 	auto start(auto&&... cont){

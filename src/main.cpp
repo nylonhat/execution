@@ -44,6 +44,6 @@ int main(){
 
 	//auto r = pure(4) | sync_wait;
 	//auto r = pure(5) >= purez | sync_wait;
-	std::println("Final result: {}", r);
+	//std::println("Final result: {}", r);
 	return 0;
 }

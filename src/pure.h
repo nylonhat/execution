@@ -9,7 +9,7 @@ struct PureOp {
     T value;
 
     void start(auto&&... cont){
-        ::set_value.operator() <decltype(recvr), decltype(cont)...> (recvr, std::forward<decltype(cont)>(cont)..., value);
+        ::set_value.operator()<decltype(recvr), decltype(cont)...>(recvr, std::forward<decltype(cont)>(cont)..., value);
     }
 };
 
