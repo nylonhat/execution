@@ -4,6 +4,7 @@ Experimental Async Library based on Senders and Recievers (p2300; std::execution
      	- Tail call optimisation by compiler without explicit trampolining
   - Testing operator overloading syntax for
     	- fmap, monadic bind, function application
+  - Continuation Stealing implementation of scheduling algorithms
 
 ```
 int main(){
