@@ -7,11 +7,11 @@
 
 template<typename RO>
 struct RepeatRecvr {
-	void set_value(auto&&... cont, auto... args){
+	void set_value(auto&... cont, auto... args){
 		auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(RO, op);
 		auto& repeat_op = *reinterpret_cast<RO*>(byte_p);
 
-		return ::start(repeat_op, std::forward<decltype(cont)>(cont)...);
+		return ::start(repeat_op, cont...);
 	}
 };
 
@@ -30,24 +30,23 @@ struct RepeatOp {
 	[[no_unique_address]] S sender;
 
 	std::size_t count = 0;
-	//Timer timer = {};
-	static constexpr size_t max = 1'00'000'000;
+	Timer timer = {};
+	static constexpr size_t max = 100'000'000;
 
 	RepeatOp(S sender, ER end_recvr)
 		: end_recvr{end_recvr}
 		, sender{sender}
-		//{timer.start();}
-	{}
+		{timer.start();}
 	
-	auto start(auto&&... cont){
+	template<class... Cont>
+	auto start(Cont&... cont){
 		if(count < max){
 			count++;
 			new (&op) OP (::connect(sender, RR{}));
-			return ::start(op, std::forward<decltype(cont)>(cont)...);
+			return ::start(op, cont...);
 		}
-		//timer.stop();
-		//return ::set_value.operator()<decltype(end_recvr), decltype(cont)...>(end_recvr, std::forward<decltype(cont)>(cont)..., timer.count()/max);
-		return ::set_value.operator()<decltype(end_recvr), decltype(cont)...>(end_recvr, std::forward<decltype(cont)>(cont)..., count);
+		timer.stop();
+		return ::set_value.operator()<ER, Cont...>(end_recvr, cont..., timer.count()/max);
 	}
 
 };

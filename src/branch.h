@@ -4,105 +4,33 @@
 #include <atomic>
 #include "sender.h"
 #include "scheduler.h"
-
-template<size_t Index, class T>
-constexpr auto& get_result(T& nested_op){
-    if constexpr (T::index == Index){
-        return nested_op.result;
-    }else{
-        return get_result<Index>(nested_op.next);
-    }
-}
-
-template<size_t Index, class T>
-consteval auto get_offset(){
-    if constexpr (T::index == Index){
-        return 0;
-    }else{
-        return offsetof(T, next) + get_offset<Index, typename T::Next>();
-    }
-}
-
-template<size_t Index, class BaseOp>
-struct NestedOp {
-    using Sender = std::tuple_element_t<Index, typename BaseOp::SenderTypeList>;
-    struct Empty{};
-
-    using Next = std::conditional_t<Index == BaseOp::size-1, Empty , NestedOp<Index+1, BaseOp> >;
-
-    using Recvr =  BaseOp::template IndexRecvr<Index>;
-    using Op = connect_t<Sender, Recvr>;
-    using Result = single_value_t<Sender>;
-
-    constexpr static size_t index = Index;
-
-    union {
-        Sender sender;
-        Op op;
-        Result result;
-    };
-
-    [[no_unique_address]] Next next;
-
-    NestedOp(Sender sender, auto... senders)
-        : sender{sender}
-        , next{senders...}
-    {}
-    
-    auto start(auto&&... cont){
-        //auto* offset_ptr = reinterpret_cast<std::byte*>(this) - offsetof(BaseOp, tuple) - get_offset<Index, typename BaseOp::Tuple>();
-		//auto& base_op = *reinterpret_cast<BaseOp*>(offset_ptr);
-
-        new (&op) Op (::connect(sender, Recvr{}));
-
-        if constexpr(Index == BaseOp::size-1){
-            return ::start(op, std::forward<decltype(cont)>(cont)...);
-        }else{
-            //if(base_op.scheduler.try_schedule(next)){
-            //    return ::start(op, std::forward<decltype(cont)>(cont)...);
-           // }
-
-            return ::start(op, next, std::forward<decltype(cont)>(cont)...); 
-        }
-    }
-    
-};
-
-template<class BOP>
-using OpTuple = NestedOp<0, BOP>;
+#include "nested_op.h"
 
 
 template<size_t Index, class BaseOp>
 struct BranchRecvr {
-	
-	auto set_value(auto&&... cont, auto value){
-        
-		auto* offset_ptr = reinterpret_cast<std::byte*>(this) - offsetof(BaseOp, tuple) - get_offset<Index, typename BaseOp::Tuple>();
-		auto& base_op = *reinterpret_cast<BaseOp*>(offset_ptr);
-		
+    constexpr static size_t index = Index;
+
+	template<class... Cont>
+	auto set_value(Cont&... cont, auto value){
+		auto& base_op = get_base_op<BaseOp>(this);
         get_result<Index>(base_op.tuple) = value;
-		
+
         auto old = base_op.counter.fetch_sub(1);
 
-        if constexpr(sizeof...(cont) > 0){
-            using FirstCont = std::tuple_element_t<0, std::tuple<std::remove_reference_t<decltype(cont)>...>>;
-            if constexpr(!std::same_as<FirstCont, typename BaseOp::template IndexTuple<Index+1>>){
-                
-                if(old == 0){
-    			    return ::set_value.operator()<decltype(base_op.end_recvr), decltype(cont)...>(base_op.end_recvr, std::forward<decltype(cont)>(cont)..., get_result<0>(base_op.tuple), get_result<1>(base_op.tuple));
-    		    }
-            }
-        }  
-
-            
-        if constexpr(sizeof...(cont) == 0){
+        using Next = BaseOp::template IndexTuple<Index+1>;
+        
+        if constexpr(!first_same_as<Next, Cont...>){
 		    if(old == 0){
-			    return ::set_value.operator()<decltype(base_op.end_recvr), decltype(cont)...>(base_op.end_recvr, std::forward<decltype(cont)>(cont)..., get_result<0>(base_op.tuple), get_result<1>(base_op.tuple));
+			    return ::set_value.operator()<typename BaseOp::ER, Cont...>(
+			        base_op.end_recvr, cont..., 
+			        get_result<0>(base_op.tuple), 
+			        get_result<1>(base_op.tuple)
+			    );
 		    }
 		}
 
-		return ::start(std::forward<decltype(cont)>(cont)...);
-        
+		return ::start(cont...);
 	}
 };
 
@@ -137,13 +65,13 @@ struct BranchOp {
         , tuple{senders...}
 	{}
 
-	auto start(auto&&... cont){
+	auto start(auto&... cont){
 		
         //if(scheduler.try_schedule(tuple)){
-           //return ::start(std::forward<decltype(cont)>(cont)...);
+        //   return ::start(std::forward<decltype(cont)>(cont)...);
         //}
 
-        return ::start(tuple, std::forward<decltype(cont)>(cont)...);
+        return ::start(tuple, cont...);
 	}
 
 };

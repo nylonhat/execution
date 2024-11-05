@@ -65,16 +65,16 @@ struct OpHandle {
 	}
 };
 
-auto set_value = [](auto& recvr, auto&&... cont, auto&&... args){
-	recvr.template set_value<decltype(cont)...>(std::forward<decltype(cont)>(cont)..., std::forward<decltype(args)>(args)...);
+auto set_value = [](auto& recvr, auto&... cont, auto&&... args){
+	recvr.template set_value<decltype(cont)...>(cont..., std::forward<decltype(args)>(args)...);
 };
 
 
 struct start_cpo {
     auto operator()(){}
 
-    auto operator()(Op auto& op, auto&&... cont){
-        op.start(std::forward<decltype(cont)>(cont)...);
+    auto operator()(Op auto& op, auto&... cont){
+        op.start(cont...);
     }
 };
 

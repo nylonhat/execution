@@ -8,8 +8,9 @@ struct PureOp {
     [[no_unique_address]] R recvr;
     T value;
 
-    void start(auto&&... cont){
-        ::set_value.operator()<decltype(recvr), decltype(cont)...>(recvr, std::forward<decltype(cont)>(cont)..., value);
+    template<class... Cont>
+    void start(Cont&... cont){
+        ::set_value.operator()<R, Cont...>(recvr, cont..., value);
     }
 };
 
@@ -36,8 +37,9 @@ struct Pure2Op {
     A a;
     B b;
 
-    void start(auto&&... cont){
-        ::set_value.operator() <decltype(recvr), decltype(cont)...> (recvr, std::forward<decltype(cont)>(cont)..., a, b);
+    template<class... Cont>
+    void start(Cont&... cont){
+        ::set_value.operator()<R, Cont...>(recvr, cont..., a, b);
     }
 };
 

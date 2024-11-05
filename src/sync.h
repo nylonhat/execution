@@ -11,9 +11,9 @@ struct SyncRecvr {
     T* value;
     std::binary_semaphore* flag;
 
-    auto set_value(auto&&... cont, auto v){
+    auto set_value(auto&... cont, auto v){
         *value = v;
-        ::start(std::forward<decltype(cont)>(cont)...);
+        ::start(cont...);
         flag->release();
 		return;
     }
