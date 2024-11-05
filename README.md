@@ -2,8 +2,7 @@ Experimental Async Library based on Senders and Recievers (p2300; std::execution
   - Testing Continuation Passing Style based implementation
     - More concise assembly generation
 - Tail call optimisation by compiler without explicit trampolining
-  - Testing operator overloading syntax for
-    : fmap, monadic bind, function application
+  - Testing operator overloading syntax for: fmap, monadic bind, function application
   - Continuation Stealing implementation of scheduling algorithms
 
 ```
