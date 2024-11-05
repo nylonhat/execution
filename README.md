@@ -11,7 +11,7 @@ int main(){
 	std::println("Final result: {}", monadic);
 
 	Threadpool pool = {};
-	auto parallel = branch(ils, pure(42), pure(69)) 
+	auto parallel = branch(pool, pure(42), pure(69)) 
 			> add
 			| repeat_n(100'000'000) 
 			| benchmark 
