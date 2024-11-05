@@ -8,7 +8,7 @@ struct NoopRecvr {
 	auto set_value(auto... args){}
 };
 
-auto id = [](auto i){return i;};
+static auto id = [](auto i){return i;};
 
 template<typename S>
 concept Sender = requires(S sender, NoopRecvr recvr){
@@ -25,7 +25,7 @@ template<Sender S>
 using single_value_t = apply_values_t<decltype(id), S>;
 
 
-auto connect = [](Sender auto&& sender, auto&& recvr){
+static auto connect = [](Sender auto&& sender, auto&& recvr){
 	return sender.connect(recvr);
 };
 
@@ -65,7 +65,7 @@ struct OpHandle {
 	}
 };
 
-auto set_value = [](auto& recvr, auto&... cont, auto&&... args){
+static auto set_value = [](auto& recvr, auto&... cont, auto&&... args){
 	recvr.template set_value<decltype(cont)...>(cont..., std::forward<decltype(args)>(args)...);
 };
 

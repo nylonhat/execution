@@ -30,13 +30,13 @@ struct RepeatOp {
 	[[no_unique_address]] S sender;
 
 	std::size_t count = 0;
-	Timer timer = {};
-	static constexpr size_t max = 100'000'000;
+	const size_t max = 100'000'000;
 
-	RepeatOp(S sender, ER end_recvr)
+	RepeatOp(S sender, ER end_recvr, size_t iterations)
 		: end_recvr{end_recvr}
 		, sender{sender}
-		{timer.start();}
+		, max{iterations}
+	{}
 	
 	template<class... Cont>
 	auto start(Cont&... cont){
@@ -45,8 +45,8 @@ struct RepeatOp {
 			new (&op) OP (::connect(sender, RR{}));
 			return ::start(op, cont...);
 		}
-		timer.stop();
-		return ::set_value.operator()<ER, Cont...>(end_recvr, cont..., timer.count()/max);
+
+		return ::set_value.operator()<ER, Cont...>(end_recvr, cont..., count);
 	}
 
 };
@@ -55,15 +55,22 @@ template<Sender S>
 struct RepeatSender {
 	using value_t = std::tuple<std::size_t>;
 	S sender;
+	size_t iterations;
 
 	auto connect(auto end_recvr){
-		return RepeatOp{sender, end_recvr};
+		return RepeatOp{sender, end_recvr, iterations};
 	}
 };
 
-auto repeat = []<Sender S>(S sender){
+auto repeat = []<Sender S>(S sender, size_t iterations){
 	//explicit template to prevent copy constructor ambiguity
-	return RepeatSender<S>{sender};
+	return RepeatSender<S>{sender, iterations};
+};
+
+auto repeat_n = [](size_t iterations){
+	return [=]<Sender S>(S sender){
+		return RepeatSender<S>{sender, iterations};
+	};
 };
 
 
