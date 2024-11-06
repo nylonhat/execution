@@ -2,6 +2,8 @@
 #define MAP_H
 
 #include "sender.h"
+#include "recvr.hpp"
+#include "sender.hpp"
 
 template<class ER, class F>
 struct MapRecvr {
@@ -10,7 +12,7 @@ struct MapRecvr {
 
 	template<class... Cont>
 	void set_value(Cont&... cont, auto... args){
-		return ::set_value.operator()<ER, Cont...>(end_recvr, cont..., func(args...));
+		return ex::set_value.operator()<ER, Cont...>(end_recvr, cont..., func(args...));
 	}
 };        
 
@@ -23,7 +25,7 @@ struct MapSender {
 
     auto connect(auto end_recvr){
         auto map_recvr = MapRecvr{end_recvr, func};
-        return ::connect(sender, map_recvr);
+        return ex::connect(sender, map_recvr);
     }
 
 };

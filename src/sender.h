@@ -65,7 +65,7 @@ struct OpHandle {
 	}
 };
 
-static auto set_value = [](auto& recvr, auto&... cont, auto&&... args){
+constexpr inline auto set_value = [](auto& recvr, auto&... cont, auto&&... args){
 	recvr.template set_value<decltype(cont)...>(cont..., std::forward<decltype(args)>(args)...);
 };
 

@@ -8,6 +8,10 @@
 #include "threadpool.h"
 #include "inline_scheduler.h"
 
+#include "op_state.hpp"
+#include "sender.hpp"
+#include "recvr.hpp"
+
 #include <print>
 
 Threadpool pool{1};
@@ -39,7 +43,7 @@ int main(){
 			> add
 			| repeat_n(100'000'000) 
 			| benchmark 
-			| sync_wait;
+			| ex::sync_wait;
 
 	std::println("Final result: {}", r);
 
