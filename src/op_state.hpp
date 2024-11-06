@@ -1,6 +1,8 @@
 #ifndef OP_STATE_HPP
 #define OP_STATE_HPP
 
+#include <concepts>
+
 namespace ex::concepts::start_cpo {
 
     template<class T>

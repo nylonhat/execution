@@ -8,7 +8,7 @@
 #include <array>
 
 #include "queue.h"
-#include "deque3.h"
+#include "deque.hpp"
 #include "scheduler.h"
 
 struct Threadpool {

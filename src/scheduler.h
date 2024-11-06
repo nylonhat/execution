@@ -4,7 +4,7 @@
 #include <functional>
 #include <memory>
 
-#include "sender.h"
+#include "sender.hpp"
 
 template<typename S>
 concept Scheduler = requires(S scheduler, OpHandle op_handle){
