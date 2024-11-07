@@ -1,7 +1,7 @@
 #ifndef PURE_H
 #define PURE_H
 
-#include "recvr.hpp"
+#include "concepts.hpp"
 
 namespace ex::algorithms::pure {
 

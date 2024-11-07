@@ -44,7 +44,7 @@ namespace ex {
     inline constexpr auto set_value = concepts::set_value_cpo::Function{};
 
     template<class T>
-    concept Recvr = requires(T t){
+    concept IsReceiver = requires(T t){
         //{ex::set_value(t)} -> std::same_as<void>;  
         t;
     };

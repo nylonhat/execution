@@ -2,12 +2,9 @@
 #define BRANCH_H
 
 #include <atomic>
-#include "scheduler.h"
-#include "nested_op.h"
-
-#include "sender.hpp"
-#include "op_state.hpp"
-#include "recvr.hpp"
+#include "scheduler.hpp"
+#include "nested_op.hpp"
+#include "concepts.hpp"
 
 namespace ex::algorithms::branch {
 
@@ -39,7 +36,7 @@ namespace ex::algorithms::branch {
 	};
 
 
-	template<Scheduler Sched, typename EndRecvr, Sender... Senders>
+	template<Scheduler Sched, typename EndRecvr, IsSender... Senders>
 	struct BranchOp {
 
 		using Self = BranchOp<Sched, EndRecvr, Senders...>;
@@ -80,7 +77,7 @@ namespace ex::algorithms::branch {
 
 	};
 
-template<Scheduler Sched, Sender S1, Sender S2>
+template<Scheduler Sched, IsSender S1, IsSender S2>
 struct BranchSender {
 	using value_t = values_join_t<S1, S2>;
 
@@ -98,7 +95,7 @@ struct BranchSender {
 
 namespace ex {
 
-	inline constexpr auto branch = [](Scheduler auto& scheduler, Sender auto sender1, Sender auto sender2){
+	inline constexpr auto branch = [](Scheduler auto& scheduler, IsSender auto sender1, IsSender auto sender2){
 		return ex::algorithms::branch::BranchSender{SchedulerHandle{scheduler}, sender1, sender2};
 	};
 

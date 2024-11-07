@@ -4,7 +4,27 @@
 #include <functional>
 #include <memory>
 
-#include "sender.hpp"
+struct OpHandle {
+	void* type_ptr = nullptr;
+	void (*start_ptr)(void*) = [](void*){};
+
+	OpHandle() = default;
+
+	template<class O>
+	OpHandle(O& op)
+		: type_ptr{std::addressof(op)}
+		, start_ptr{[](void* type_ptr){
+			O& op = *static_cast<O*>(type_ptr);
+			return op.start();
+		}} 
+	{}
+
+	OpHandle(OpHandle& rhs) = default;
+
+	void start(){
+		return start_ptr(type_ptr);
+	}
+};
 
 template<typename S>
 concept Scheduler = requires(S scheduler, OpHandle op_handle){

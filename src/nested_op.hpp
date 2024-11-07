@@ -1,9 +1,7 @@
 #ifndef NESTED_OP_H
 #define NESTED_OP_H
 
-#include "sender.hpp"
-#include "op_state.hpp"
-#include "recvr.hpp"
+#include "concepts.hpp"
 
 namespace ex::algorithms::branch {
 

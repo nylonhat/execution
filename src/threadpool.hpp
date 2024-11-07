@@ -7,9 +7,9 @@
 #include <vector>
 #include <array>
 
-#include "queue.h"
+#include "queue.hpp"
 #include "deque.hpp"
-#include "scheduler.h"
+#include "scheduler.hpp"
 
 struct Threadpool {
 private:
