@@ -13,7 +13,13 @@ namespace ex {
     using apply_values_t = std::invoke_result_t<
         decltype(&std::apply<Function, typename Sender::value_t>), 
         Function, typename Sender::value_t
-    >;        
+    >; 
+
+    template<typename Function, IsSender Sender>
+    using apply_errors_t = std::invoke_result_t<
+        decltype(&std::apply<Function, typename Sender::error_t>), 
+        Function, typename Sender::error_t
+    >;       
 
     template<IsSender... Senders>
     using values_join_t =  std::invoke_result_t<

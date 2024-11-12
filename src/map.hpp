@@ -18,6 +18,16 @@ namespace ex::algorithms::map {
 			    function(args...)
 			);
 		}
+
+		
+		template<IsOpState... Cont>
+		void set_error(Cont&... cont, auto... args){
+			return ex::set_error.operator()<NextReceiver, Cont...>(
+			    next_receiver, 
+			    cont..., 
+			    args...
+			);
+		}
 	};        
 
 

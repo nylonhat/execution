@@ -19,6 +19,7 @@ namespace ex::algorithms::pure {
     template<class T>
     struct PureSender {
         using value_t = std::tuple<T>;
+        using error_t = std::tuple<>;
         T value;
 
         template<class R>

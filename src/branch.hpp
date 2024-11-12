@@ -9,10 +9,10 @@
 namespace ex::algorithms::branch {
 
 	template<size_t Index, class BaseOp>
-	struct BranchRecvr {
+	struct Receiver {
 	    constexpr static size_t index = Index;
 
-		template<class... Cont>
+		template<IsOpState... Cont>
 		auto set_value(Cont&... cont, auto value){
 			auto& base_op = get_base_op<BaseOp>(this);
 	        get_result<Index>(base_op.tuple) = value;
@@ -23,8 +23,8 @@ namespace ex::algorithms::branch {
         
 	        if constexpr(!first_same_as<Next, Cont...>){
 			    if(old == 0){
-				    return ex::set_value.operator()<typename BaseOp::ER, Cont...>(
-				        base_op.end_recvr, cont..., 
+				    return ex::set_value.operator()<typename BaseOp::NextReceiver, Cont...>(
+				        base_op.next_receiver, cont..., 
 				        get_result<0>(base_op.tuple), 
 				        get_result<1>(base_op.tuple)
 				    );
@@ -36,23 +36,21 @@ namespace ex::algorithms::branch {
 	};
 
 
-	template<Scheduler Sched, typename EndRecvr, IsSender... Senders>
-	struct BranchOp {
+	template<IsScheduler Scheduler, IsReceiver SuffixReceiver, IsSender... Senders>
+	struct OpState {
 
-		using Self = BranchOp<Sched, EndRecvr, Senders...>;
-	    using ER = EndRecvr;
-	    template<size_t Index>
-	    using IndexRecvr = BranchRecvr<Index, Self>;
-	    template<size_t Index>
-	    using IndexTuple = NestedOp<Index, Self>;
+		using Self = OpState<Scheduler, SuffixReceiver, Senders...>;
+	    using NextReceiver = SuffixReceiver;
+	    template<size_t Index> using IndexRecvr = Receiver<Index, Self>;
+	    template<size_t Index> using IndexTuple = NestedOp<Index, Self>;
 	    using Tuple = OpTuple<Self>;
 	    using SenderTypeList = std::tuple<Senders...>;
 	    static constexpr size_t size = sizeof...(Senders);
 
 
-		[[no_unique_address]] EndRecvr end_recvr;
+		[[no_unique_address]] NextReceiver next_receiver;
 	
-		Sched scheduler;
+		Scheduler scheduler;
 
 	    union{
 	        Tuple tuple;
@@ -60,8 +58,8 @@ namespace ex::algorithms::branch {
 
 		std::atomic<std::int8_t> counter = 1;
 
-		BranchOp(Sched scheduler, EndRecvr end_recvr, Senders... senders)
-			: end_recvr{end_recvr}
+		OpState(Scheduler scheduler, SuffixReceiver suffix_receiver, Senders... senders)
+			: next_receiver{suffix_receiver}
 			, scheduler{scheduler}
 	        , tuple{senders...}
 		{}
@@ -77,26 +75,26 @@ namespace ex::algorithms::branch {
 
 	};
 
-template<Scheduler Sched, IsSender S1, IsSender S2>
-struct BranchSender {
-	using value_t = values_join_t<S1, S2>;
+	template<IsScheduler Scheduler, IsSender S1, IsSender S2>
+	struct Sender {
+		using value_t = values_join_t<S1, S2>;
 
-	Sched scheduler;
-	[[no_unique_address]] S1 sender1;
-	[[no_unique_address]] S2 sender2;
+		Scheduler scheduler;
+		[[no_unique_address]] S1 sender1;
+		[[no_unique_address]] S2 sender2;
 		
-	template<typename ER>
-	auto connect(ER end_recvr){
-		return BranchOp{scheduler, end_recvr, sender1, sender2};
-	}
-};
+		template<IsReceiver SuffixReceiver>
+		auto connect(SuffixReceiver suffix_receiver){
+			return OpState{scheduler, suffix_receiver, sender1, sender2};
+		}
+	};
 
 }//namespace ex::algorithms::branch
 
 namespace ex {
 
-	inline constexpr auto branch = [](Scheduler auto& scheduler, IsSender auto sender1, IsSender auto sender2){
-		return ex::algorithms::branch::BranchSender{SchedulerHandle{scheduler}, sender1, sender2};
+	inline constexpr auto branch = [](IsScheduler auto& scheduler, IsSender auto sender1, IsSender auto sender2){
+		return ex::algorithms::branch::Sender{SchedulerHandle{scheduler}, sender1, sender2};
 	};
 
 }//namespace ex

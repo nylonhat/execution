@@ -27,11 +27,11 @@ struct OpHandle {
 };
 
 template<typename S>
-concept Scheduler = requires(S scheduler, OpHandle op_handle){
+concept IsScheduler = requires(S scheduler, OpHandle op_handle){
     {scheduler.try_schedule(op_handle)} -> std::same_as<bool>;
 };
 
-template<Scheduler S>
+template<IsScheduler S>
 struct SchedulerHandle {
 	S* ptr = nullptr;
 	

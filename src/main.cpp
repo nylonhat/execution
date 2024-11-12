@@ -1,6 +1,7 @@
 #include "bind.hpp"
 #include "repeat.hpp"
 #include "map.hpp"
+#include "stay_if.hpp"
 #include "branch.hpp"
 #include "pure.hpp"
 #include "sync.hpp"
@@ -34,14 +35,26 @@ int main(){
 	//auto r = pure2(5, 7) > add >= purez<50>() > id | sync_wait;
 	//auto r = pure(42) > pure >= identity | sync_wait;
 
+	/*
 	auto r = ex::branch(ils, ex::pure(42), ex::pure(69)) 
 			> add
 			>= ex::pure
 			| ex::repeat_n(100'000'000) 
 			| ex::benchmark 
 			| ex::sync_wait;
+	*/
+
+	auto r = ex::pure(5) 
+			| ex::stay_if([](auto i){
+			    return i > 9;
+			  }) 
+	        | ex::bind_error([](auto i){
+	        	return ex::pure(8);
+	          })
+			| ex::sync_wait;
 	
 	std::println("Final result: {}", r);
+
 
 	return 0;
 }

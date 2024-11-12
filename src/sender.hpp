@@ -11,6 +11,7 @@ namespace ex::concepts::connect_cpo {
 
     struct DummyRecvr{
         auto set_value(auto&..., auto&&...){}
+        auto set_error(auto&..., auto&&...){}
     };
     
     template<class T>

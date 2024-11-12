@@ -18,7 +18,15 @@ namespace ex::algorithms::sync_wait {
             flag->release();
     		return;
         }
-    };
+
+        
+        auto set_error(auto&... cont, auto error){
+                *result = Result{};
+                ex::start(cont...);
+                flag->release();
+        		return;
+            }
+        };
 
 }//namespace ex::algorithms::sync
 

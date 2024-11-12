@@ -23,9 +23,9 @@ namespace ex::algorithms::branch {
         }
     }
 
-    template<class BaseOp, class Child>
-    auto& get_base_op(Child* child_ptr){
-        auto total_offset = offsetof(BaseOp, tuple) + get_offset<Child::index, typename BaseOp::Tuple>();
+    template<class BaseOp, class ChildOp>
+    auto& get_base_op(ChildOp* child_ptr){
+        auto total_offset = offsetof(BaseOp, tuple) + get_offset<ChildOp::index, typename BaseOp::Tuple>();
         auto* offset_ptr = reinterpret_cast<std::byte*>(child_ptr) - total_offset;
     	auto& base_op = *reinterpret_cast<BaseOp*>(offset_ptr);
     	return base_op;
@@ -37,8 +37,8 @@ namespace ex::algorithms::branch {
         using Sender = std::tuple_element_t<Index, typename BaseOp::SenderTypeList>;
         struct Empty{};
         using Next = std::conditional_t<Index == BaseOp::size-1, Empty, NestedOp<Index+1, BaseOp>>;
-        using Recvr =  BaseOp::template IndexRecvr<Index>;
-        using Op = connect_t<Sender, Recvr>;
+        using InfixReceiver =  BaseOp::template IndexRecvr<Index>;
+        using Op = connect_t<Sender, InfixReceiver>;
         using Result = single_value_t<Sender>;
 
         constexpr static size_t index = Index;
@@ -59,7 +59,7 @@ namespace ex::algorithms::branch {
         auto start(auto&... cont){
     		auto& base_op = get_base_op<BaseOp>(this);
 
-            new (&op) Op (ex::connect(sender, Recvr{}));
+            new (&op) Op (ex::connect(sender, InfixReceiver{}));
 
             if constexpr(Index == BaseOp::size-1){
                 return ex::start(op, cont...);
@@ -77,7 +77,6 @@ namespace ex::algorithms::branch {
 
     template<class BOP>
     using OpTuple = NestedOp<0, BOP>;
-
 
     template<class... Pack>
     concept empty_pack = sizeof...(Pack) == 0;
