@@ -10,15 +10,12 @@
 #include "inline_scheduler.hpp"
 #include <print>
 
-Threadpool pool{1};
-InlineScheduler ils{};
-
 static auto add = [](int a, int b) -> int{
 	return a + b;
 };
 
 template<size_t N>
-auto purez(){
+constexpr auto purez_t(){
 	return []<size_t... I>(std::index_sequence<I...>){
 		return [](auto v){
 			return (ex::pure(v) >=...>= ([](auto){return ex::pure;}(I)) ); 
@@ -28,11 +25,17 @@ auto purez(){
 	//pure(v) >= pure >= ... >= pure;
 };
 
+template<size_t N>
+inline constexpr auto purez = purez_t<N>();
+
 int main(){
 	
+	Threadpool pool{1};
+	//InlineScheduler ils{};
+
 	//auto r = ex::pure(7) | ex::sync_wait;
 	//auto r = pure(42) | ex::repeat | ex::sync_wait;
-	auto r = ex::pure(5, 7) > add >= purez<50>() > ex::identity | ex::sync_wait;
+	auto r = ex::pure(5, 7) > add >= purez<20> > ex::identity | ex::sync_wait;
 	//auto r = ex::pure(42) > ex::pure >= ex::identity | ex::sync_wait;
 
 	/*
