@@ -33,7 +33,7 @@ namespace ex::algorithms::repeat {
 		[[no_unique_address]] ChildSender child_sender;
 
 		std::size_t count = 0;
-		const size_t max = 100'000'000;
+		const std::size_t max = 0;
 
 		OpState(ChildSender child_sender, SuffixReceiver suffix_receiver, size_t iterations)
 			: next_receiver{suffix_receiver}

@@ -24,26 +24,26 @@ auto purez(){
 			return (ex::pure(v) >=...>= ([](auto){return ex::pure;}(I)) ); 
 		};
 	}(std::make_index_sequence<N>{});
-
+	//make sure to have link time optimisation on
 	//pure(v) >= pure >= ... >= pure;
 };
 
 int main(){
 	
-	//auto r = pure(4) | sync_wait;
-	//auto r = pure(42) | repeat | sync_wait;
-	//auto r = pure2(5, 7) > add >= purez<50>() > id | sync_wait;
-	//auto r = pure(42) > pure >= identity | sync_wait;
+	//auto r = ex::pure(7) | ex::sync_wait;
+	//auto r = pure(42) | ex::repeat | ex::sync_wait;
+	auto r = ex::pure(5, 7) > add >= purez<50>() > ex::identity | ex::sync_wait;
+	//auto r = ex::pure(42) > ex::pure >= ex::identity | ex::sync_wait;
 
 	/*
 	auto r = ex::branch(ils, ex::pure(42), ex::pure(69)) 
 			> add
 			>= ex::pure
 			| ex::repeat_n(100'000'000) 
-			| ex::benchmark 
+			//| ex::benchmark 
 			| ex::sync_wait;
 	*/
-
+	/*
 	auto r = ex::pure(5) 
 			| ex::stay_if([](auto i){
 			    return i > 9;
@@ -52,7 +52,7 @@ int main(){
 	        	return ex::pure(8);
 	          })
 			| ex::sync_wait;
-	
+	*/
 	std::println("Final result: {}", r);
 
 

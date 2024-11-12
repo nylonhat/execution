@@ -38,7 +38,7 @@ namespace ex::algorithms::stay_if {
 	template<IsSender ChildSender, class Predicate>
 	struct Sender {
 		using value_t = ChildSender::value_t;
-		using error_t = ChildSender::error_t;
+		using error_t = ChildSender::value_t;
 		
 	    [[no_unique_address]] ChildSender child_sender;
 	    [[no_unique_address]] Predicate predicate;

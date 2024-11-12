@@ -43,7 +43,7 @@ namespace ex::concepts::start_cpo {
 namespace ex {
 
     inline constexpr auto start = concepts::start_cpo::Function{};
-
+    
     template<class T>
     concept IsOpState = requires(T t){
         {ex::start(t)} -> std::same_as<void>;  

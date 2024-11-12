@@ -50,7 +50,7 @@ namespace ex::concepts::connect_cpo {
 namespace ex {
     
     inline constexpr auto connect = concepts::connect_cpo::Function{};
-
+    
     template<class T>
     concept IsSender = requires(T t){
         {ex::connect(t, concepts::connect_cpo::DummyRecvr{})} -> IsOpState<>;  

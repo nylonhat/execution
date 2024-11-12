@@ -22,7 +22,7 @@ namespace ex::concepts::set_value_cpo {
  
     
     struct Function {
-        auto operator()(this const Function&, HasMember auto& recvr, auto&...cont, auto&&... args) {
+        inline constexpr auto operator()(this const Function&, HasMember auto& recvr, auto&...cont, auto&&... args) {
             return recvr.template set_value<decltype(cont)...>(cont..., std::forward<decltype(args)>(args)...);
         }
 
@@ -58,7 +58,7 @@ namespace ex::concepts::set_error_cpo {
  
     
     struct Function {
-        auto operator()(this const Function&, HasMember auto& recvr, auto&...cont, auto&&... args) {
+        inline constexpr auto operator()(this const Function&, HasMember auto& recvr, auto&...cont, auto&&... args) {
             return recvr.template set_error<decltype(cont)...>(cont..., std::forward<decltype(args)>(args)...);
         }
 
