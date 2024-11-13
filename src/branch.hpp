@@ -23,11 +23,14 @@ namespace ex::algorithms::branch {
         
 	        if constexpr(!first_same_as<Next, Cont...>){
 			    if(old == 0){
-				    return ex::set_value.operator()<typename BaseOp::NextReceiver, Cont...>(
-				        base_op.next_receiver, cont..., 
-				        get_result<0>(base_op.tuple), 
-				        get_result<1>(base_op.tuple)
-				    );
+					auto lambda = [&](auto&&... values){
+						return ex::set_value.operator()<typename BaseOp::NextReceiver, Cont...>(
+					        base_op.next_receiver, cont..., 
+					        std::forward<decltype(values)>(values)...
+					    );					
+					};
+
+					return apply(lambda, base_op.tuple);
 			    }
 			}
 
@@ -56,7 +59,7 @@ namespace ex::algorithms::branch {
 	        Tuple tuple;
 	    };
 
-		std::atomic<std::int8_t> counter = 1;
+		std::atomic<std::int8_t> counter = size - 1;
 
 		OpState(Scheduler scheduler, SuffixReceiver suffix_receiver, Senders... senders)
 			: next_receiver{suffix_receiver}
@@ -75,6 +78,7 @@ namespace ex::algorithms::branch {
 
 	};
 
+	/*
 	template<IsScheduler Scheduler, IsSender S1, IsSender S2>
 	struct Sender {
 		using value_t = values_join_t<S1, S2>;
@@ -88,14 +92,67 @@ namespace ex::algorithms::branch {
 			return OpState{scheduler, suffix_receiver, sender1, sender2};
 		}
 	};
+	*/
+
+	
+	template<IsScheduler Scheduler, IsSender... ChildSenders>
+	struct Sender {
+		using value_t = values_join_t<ChildSenders...>;
+
+		Scheduler scheduler;
+		std::tuple<ChildSenders...> tuple;
+
+		Sender(const Sender&) = default;
+
+		Sender(Scheduler scheduler, ChildSenders... child_senders)
+			: scheduler{scheduler}
+			, tuple{child_senders...}
+		{}
+
+		Sender(Scheduler scheduler, Sender<Scheduler, ChildSenders...> branch_sender)
+			: scheduler{scheduler}
+			, tuple{branch_sender.tuple}
+		{}
+		
+		template<IsReceiver SuffixReceiver>
+		auto connect(SuffixReceiver suffix_receiver){
+			auto lambda = [&](auto&&... child_senders){
+				return OpState{scheduler, suffix_receiver, child_senders...};
+			};
+
+			return std::apply(lambda, tuple);
+		}
+	};
+
+	struct Function {
+		
+		auto operator()(this auto&&, IsScheduler auto& scheduler, IsSender auto... senders){
+			auto handle = SchedulerHandle{scheduler};
+			
+			auto lambda = [&](auto... senders){
+				return Sender{handle, senders...};
+			};
+
+			return std::apply(lambda, std::tuple_cat((Sender{handle, senders}.tuple)...));
+			
+		}
+
+		
+		//auto operator()(this auto&&, IsScheduler auto& scheduler, IsSender auto sender){
+			//TODO pipeable version??
+		//}
+		
+	};
 
 }//namespace ex::algorithms::branch
 
 namespace ex {
 
-	inline constexpr auto branch = [](IsScheduler auto& scheduler, IsSender auto sender1, IsSender auto sender2){
-		return ex::algorithms::branch::Sender{SchedulerHandle{scheduler}, sender1, sender2};
-	};
+	//inline constexpr auto branch = [](IsScheduler auto& scheduler, IsSender auto sender1, IsSender auto sender2){
+	//	return ex::algorithms::branch::Sender{SchedulerHandle{scheduler}, sender1, sender2};
+	//};
+
+	inline constexpr auto branch = algorithms::branch::Function{};
 
 }//namespace ex
 

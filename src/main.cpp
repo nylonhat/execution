@@ -10,8 +10,8 @@
 #include "inline_scheduler.hpp"
 #include <print>
 
-static auto add = [](int a, int b) -> int{
-	return a + b;
+static auto add = [](auto... v) {
+	return (... + v);
 };
 
 template<size_t N>
@@ -31,11 +31,11 @@ inline constexpr auto purez = purez_t<N>();
 int main(){
 	
 	Threadpool pool{1};
-	//InlineScheduler ils{};
+	InlineScheduler ils{};
 
-	//auto r = ex::pure(7) | ex::sync_wait;
+	//auto r = ex::pure(7, 3) > add | ex::sync_wait;
 	//auto r = pure(42) | ex::repeat | ex::sync_wait;
-	auto r = ex::pure(5, 7) > add >= purez<20> > ex::identity | ex::sync_wait;
+	//auto r = ex::pure(5, 7) > add >= purez<20> > ex::identity | ex::sync_wait;
 	//auto r = ex::pure(42) > ex::pure >= ex::identity | ex::sync_wait;
 
 	/*
@@ -43,9 +43,10 @@ int main(){
 			> add
 			>= ex::pure
 			| ex::repeat_n(100'000'000) 
-			//| ex::benchmark 
+			| ex::benchmark 
 			| ex::sync_wait;
 	*/
+	
 	/*
 	auto r = ex::pure(5) 
 			| ex::stay_if([](auto i){
@@ -56,6 +57,10 @@ int main(){
 	          })
 			| ex::sync_wait;
 	*/
+	auto r = ex::branch(ils, ex::pure(4), ex::pure(5), ex::pure(6)) > add | ex::sync_wait;
+	
+	//auto r = ex::pure(5, 6, 4) > add | ex::sync_wait;
+	
 	std::println("Final result: {}", r);
 
 

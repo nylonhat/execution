@@ -41,7 +41,7 @@ struct SchedulerHandle {
 		: ptr{std::addressof(scheduler)}
 	{}
 
-	SchedulerHandle(SchedulerHandle& rhs) = default;
+	SchedulerHandle(const SchedulerHandle& rhs) = default;
 
 	auto try_schedule(OpHandle op_handle){
 		return ptr->try_schedule(op_handle);

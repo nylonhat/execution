@@ -78,6 +78,16 @@ namespace ex::algorithms::branch {
     template<class BOP>
     using OpTuple = NestedOp<0, BOP>;
 
+    template<class F, class Tuple, std::size_t... I>
+    constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>){
+        return std::invoke(std::forward<F>(f), get_result<I>(std::forward<Tuple>(t))...);    
+    }
+
+    template<class F, class BaseOp>
+    constexpr decltype(auto) apply(F&& f, OpTuple<BaseOp>& t){
+        return apply_impl(std::forward<F>(f), std::forward<decltype(t)>(t), std::make_index_sequence<BaseOp::size>{});
+    }
+
     template<class... Pack>
     concept empty_pack = sizeof...(Pack) == 0;
 
