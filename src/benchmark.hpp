@@ -16,12 +16,7 @@ namespace ex::algorithms::benchmark {
 
 			base_op.timer.stop();
 
-			return ex::set_value.operator()
-			    <typename BaseOp::NextReceiver, Cont...>(
-				base_op.next_receiver, 
-				cont..., 
-				base_op.timer.count()/count
-			);
+			return ex::set_value.operator()<typename BaseOp::NextReceiver, Cont...>(base_op.next_receiver, cont..., base_op.timer.count()/count);
 		}
 	};
 

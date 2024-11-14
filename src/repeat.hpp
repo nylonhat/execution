@@ -49,11 +49,7 @@ namespace ex::algorithms::repeat {
 				return ex::start(child_op, cont...);
 			}
 
-			return ex::set_value.operator()<NextReceiver, Cont...>(
-			    next_receiver, 
-			    cont..., 
-			    count
-			);
+			return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., count);
 		}
 
 	};

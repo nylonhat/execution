@@ -13,24 +13,20 @@ namespace ex::algorithms::stay_if {
 		template<IsOpState... Cont>
 		void set_value(Cont&... cont, auto... args){
 			if(std::invoke(predicate, args...)){
-				return ex::set_value.operator()<NextReceiver, Cont...>
-				(next_receiver, cont..., args...);
+				return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
 			}
 
-			return ex::set_error.operator()<NextReceiver, Cont...>
-			(next_receiver, cont..., args...);
+			return ex::set_error.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
 		}
 
 		
 		template<IsOpState... Cont>
 		void set_error(Cont&... cont, auto... args){
 			if(std::invoke(predicate, args...)){
-				return ex::set_error.operator()<NextReceiver, Cont...>
-				(next_receiver, cont..., args...);
+				return ex::set_error.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
 			}
 			
-			return ex::set_value.operator()<NextReceiver, Cont...>
-			(next_receiver, cont..., args...);
+			return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
 		}
 	};        
 

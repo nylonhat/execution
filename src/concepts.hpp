@@ -32,7 +32,9 @@ namespace ex {
 
     template<IsSender Sender, IsReceiver Receiver>
     using connect_t = std::invoke_result_t<decltype(ex::connect), Sender, Receiver>;
+
     
+    enum class Channel {value, error};  
     
 }//namespace ex
 

@@ -5,60 +5,73 @@
 
 namespace ex::algorithms::map {
 
-	template<IsReceiver NextReceiver, class Function>
+	template<Channel channel, IsReceiver NextReceiver, class Function>
 	struct Receiver {
 		[[no_unique_address]] NextReceiver next_receiver;
 	    [[no_unique_address]] Function function;
 
 		template<IsOpState... Cont>
 		void set_value(Cont&... cont, auto... args){
-			return ex::set_value.operator()<NextReceiver, Cont...>(
-			    next_receiver, 
-			    cont..., 
-			    function(args...)
-			);
+			if constexpr(channel == Channel::value){
+				return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., function(args...));
+			} else if (channel == Channel::error){
+				return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
+			}
 		}
-
 		
 		template<IsOpState... Cont>
 		void set_error(Cont&... cont, auto... args){
-			return ex::set_error.operator()<NextReceiver, Cont...>(
-			    next_receiver, 
-			    cont..., 
-			    args...
-			);
+			if constexpr(channel == Channel::value){
+				return ex::set_error.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
+			} else if (channel == Channel::error){
+				return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., function(args...));
+			}
 		}
 	};        
 
 
-	template<IsSender ChildSender, class Function>
+	template<Channel channel, IsSender ChildSender, class Function>
 	struct Sender {
 		using value_t = std::tuple<apply_values_t<Function, ChildSender>>;
+	    
 	    [[no_unique_address]] ChildSender child_sender;
 	    [[no_unique_address]] Function function;
 
-	    auto connect(auto suffix_receiver){
-	        auto map_receiver = Receiver{suffix_receiver, function};
-	        return ex::connect(child_sender, map_receiver);
+		template<IsReceiver SuffixReceiver>
+	    auto connect(SuffixReceiver suffix_receiver){
+			auto infix_receiver = Receiver<channel, SuffixReceiver, Function>{suffix_receiver, function};
+	        return ex::connect(child_sender, infix_receiver);
 	    }
 
+	};
+
+	template<Channel channel>
+	struct FunctionObject {
+		template<IsSender ChildSender, class Function>
+		auto operator()(this auto&&, ChildSender child_sender, Function function){
+			return Sender<channel, ChildSender, Function>{child_sender, function};
+		}
+
+		template<class Function>
+		auto operator()(this auto&&, Function function){
+			return [=]<IsSender ChildSender>(ChildSender child_sender){
+				return Sender<channel, ChildSender, Function>{child_sender, function};
+			};
+		}
 	};
 
 }//namespace map
 
 namespace ex {
 
-	inline constexpr auto map = [](IsSender auto child_sender, auto function){
-	    return algorithms::map::Sender{child_sender, function};
-	};
-
-	
+	inline constexpr auto map_value = algorithms::map::FunctionObject<Channel::value>{};
+	inline constexpr auto map_error = algorithms::map::FunctionObject<Channel::error>{};
 
 }//namespace ex
 
 
 auto operator > (ex::IsSender auto sender, auto function){
-    return ex::map(sender, function);
+    return ex::map_value(sender, function);
 }
 
 

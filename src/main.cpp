@@ -18,7 +18,7 @@ template<size_t N>
 constexpr auto purez_t(){
 	return []<size_t... I>(std::index_sequence<I...>){
 		return [](auto v){
-			return (ex::pure(v) >=...>= ([](auto){return ex::pure;}(I)) ); 
+			return (ex::value(v) >=...>= ([](auto){return ex::value;}(I)) ); 
 		};
 	}(std::make_index_sequence<N>{});
 	//make sure to have link time optimisation on
@@ -33,36 +33,37 @@ int main(){
 	Threadpool pool{1};
 	InlineScheduler ils{};
 
-	//auto r = ex::pure(7, 3) > add | ex::sync_wait;
-	//auto r = pure(42) | ex::repeat | ex::sync_wait;
-	//auto r = ex::pure(5, 7) > add >= purez<20> > ex::identity | ex::sync_wait;
-	//auto r = ex::pure(42) > ex::pure >= ex::identity | ex::sync_wait;
+	auto map_test = ex::value(7, 3) > add | ex::sync_wait;
+	auto repeat_test = ex::value(42) | ex::repeat_n(10) | ex::sync_wait;
+	auto bind_stress = ex::value(5, 7) > add >= purez<20> > ex::identity | ex::sync_wait;
+	auto monadic = ex::value(42) > ex::value >= ex::identity | ex::sync_wait;
 
-	/*
-	auto r = ex::branch(ils, ex::pure(42), ex::pure(69)) 
-			> add
-			>= ex::pure
-			| ex::repeat_n(100'000'000) 
-			| ex::benchmark 
-			| ex::sync_wait;
-	*/
+	auto branch_bench = ex::value(42)
+		| ex::branch(ils, ex::value(69)) 
+		| ex::map_value(add)
+		| ex::bind_value(ex::value)
+		| ex::repeat_n(100'000'000) 
+		| ex::benchmark 
+		| ex::sync_wait;
 	
-	/*
-	auto r = ex::pure(5) 
-			| ex::stay_if([](auto i){
-			    return i > 9;
-			  }) 
-	        | ex::bind_error([](auto i){
-	        	return ex::pure(8);
-	          })
-			| ex::sync_wait;
-	*/
-	auto r = ex::branch(ils, ex::pure(4), ex::pure(5), ex::pure(6)) > add | ex::sync_wait;
+	auto conditional = ex::value(5) 
+		| ex::stay_if([](auto i){
+			return i > 9;
+		  }) 
+	    | ex::bind_error([](auto i){
+	        return ex::value(8);
+	      })
+		| ex::sync_wait;
 	
-	//auto r = ex::pure(5, 6, 4) > add | ex::sync_wait;
-	
-	std::println("Final result: {}", r);
-
+	auto multibranch = ex::value(3)
+		| ex::branch(ils, ex::value(4))
+		| ex::branch(ils, ex::value(5)) 
+		| ex::branch(ils, ex::value(6)) 
+		| ex::map_value(add) 
+		| ex::bind_value(ex::value)
+		| ex::sync_wait;
+		
+	std::println("Final result: {}", branch_bench);
 
 	return 0;
 }
