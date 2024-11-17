@@ -44,32 +44,35 @@ namespace ex::algorithms::branch {
         constexpr static size_t index = Index;
 
         union {
-            Sender sender;
-            Op op;
+            manual_lifetime<Sender> sender;
+            manual_lifetime<Op> op;
             Result result;
         };
 
         [[no_unique_address]] Next next;
 
         NestedOp(Sender sender, auto... senders)
-            : sender{sender}
+            : sender{[&](){return sender;}}
             , next{senders...}
         {}
     
         auto start(auto&... cont){
     		auto& base_op = get_base_op<BaseOp>(this);
 
-            new (&op) Op (ex::connect(sender, InfixReceiver{}));
+            //new (&op) Op (ex::connect(sender, InfixReceiver{}));
+            op.construct_from([&](){
+                return ex::connect(sender.get(), InfixReceiver{});                      
+            });
 
             if constexpr(Index == BaseOp::size-1){
-                return ex::start(op, cont...);
+                return ex::start(op.get(), cont...);
 
             } else {
                 if(base_op.scheduler.try_schedule(next)){
-                    return ex::start(op, cont...);
+                    return ex::start(op.get(), cont...);
                 }
 
-                return ex::start(op, next, cont...); 
+                return ex::start(op.get(), next, cont...); 
             }
         }
     
@@ -78,14 +81,14 @@ namespace ex::algorithms::branch {
     template<class BOP>
     using OpTuple = NestedOp<0, BOP>;
 
-    template<class F, class Tuple, std::size_t... I>
-    constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>){
-        return std::invoke(std::forward<F>(f), get_result<I>(std::forward<Tuple>(t))...);    
+    template<class Tuple, std::size_t... I, class Recvr, class... Cont>
+    constexpr auto apply_set_value_impl(Tuple&& t, std::index_sequence<I...>, Recvr& recvr, Cont&... cont){
+        return ex::set_value.operator()<Recvr, Cont...>(recvr, cont..., get_result<I>(std::forward<Tuple>(t))...);    
     }
 
-    template<class F, class BaseOp>
-    constexpr decltype(auto) apply(F&& f, OpTuple<BaseOp>& t){
-        return apply_impl(std::forward<F>(f), std::forward<decltype(t)>(t), std::make_index_sequence<BaseOp::size>{});
+    template<class BaseOp, class Recvr, class... Cont>
+    constexpr auto apply_set_value(OpTuple<BaseOp>& t, Recvr& recvr, Cont&... cont){
+        return apply_set_value_impl(std::forward<decltype(t)>(t), std::make_index_sequence<BaseOp::size>{}, recvr, cont...);
     }
 
     template<class... Pack>

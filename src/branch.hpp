@@ -23,11 +23,12 @@ namespace ex::algorithms::branch {
         
 	        if constexpr(!first_same_as<Next, Cont...>){
 			    if(old == 0){
-					auto lambda = [&](auto&&... values){
-						return ex::set_value.operator()<typename BaseOp::NextReceiver, Cont...>(base_op.next_receiver, cont..., std::forward<decltype(values)>(values)...);
-					};
+					//auto lambda = [&](auto&&... values){
+					//	return ex::set_value.operator()<typename BaseOp::NextReceiver, Cont...>(base_op.next_receiver, cont..., std::forward<decltype(values)>(values)...);
+					//};
 
-					return apply(lambda, base_op.tuple);
+					//return apply(lambda, base_op.tuple);
+					return apply_set_value(base_op.tuple, base_op.next_receiver, cont...);
 			    }
 			}
 

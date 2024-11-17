@@ -1,9 +1,8 @@
 #ifndef REPEAT_H
 #define REPEAT_H
 
-#include "sender.hpp"
-#include "op_state.hpp"
-#include "receiver.hpp"
+#include "concepts.hpp"
+#include "manual_lifetime.hpp"
 
 namespace ex::algorithms::repeat {
 
@@ -25,19 +24,15 @@ namespace ex::algorithms::repeat {
 		using NextReceiver = SuffixReceiver;
 	
 		[[no_unique_address]] NextReceiver next_receiver;
-
-		union{
-			ChildOp child_op;
-		};
-	
-		[[no_unique_address]] ChildSender child_sender;
+		manual_lifetime<ChildOp> child_op;
+		[[no_unique_address]] manual_lifetime<ChildSender> child_sender;
 
 		std::size_t count = 0;
 		const std::size_t max = 0;
 
 		OpState(ChildSender child_sender, SuffixReceiver suffix_receiver, size_t iterations)
 			: next_receiver{suffix_receiver}
-			, child_sender{child_sender}
+			, child_sender{[&](){return child_sender;}}
 			, max{iterations}
 		{}
 	
@@ -45,8 +40,11 @@ namespace ex::algorithms::repeat {
 		auto start(Cont&... cont){
 			if(count < max){
 				count++;
-				new (&child_op) ChildOp (ex::connect(child_sender, InfixReceiver{}));
-				return ex::start(child_op, cont...);
+				//new (&child_op) ChildOp (ex::connect(child_sender, InfixReceiver{}));
+				child_op.construct_from([&](){
+					return ex::connect(child_sender.get(), InfixReceiver{});                       	
+                });
+				return ex::start(child_op.get(), cont...);
 			}
 
 			return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., count);

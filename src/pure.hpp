@@ -5,24 +5,29 @@
 
 namespace ex::algorithms::pure {
     
+    template<Channel channel, class Tuple, std::size_t... I, class Recvr, class... Cont>
+    constexpr auto apply_set_impl(Tuple&& t, std::index_sequence<I...>, Recvr& recvr, Cont&... cont){
+        if constexpr(channel == Channel::value){
+            return ex::set_value.operator()<Recvr, Cont...>(recvr, cont..., std::get<I>(std::forward<Tuple>(t))...);    
+        }else if (channel == Channel::error){
+            return ex::set_error.operator()<Recvr, Cont...>(recvr, cont..., std::get<I>(std::forward<Tuple>(t))...);    
+        }
+    }
+
+    template<Channel channel, class Tuple, class Recvr, class... Cont>
+    constexpr auto apply_set(Tuple&& t, Recvr& recvr, Cont&... cont){
+        return apply_set_impl<channel>(std::forward<Tuple>(t), std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>{}, recvr, cont...);
+    }
+    
     template<Channel channel, class NextReceiver, class... Values>
     struct OpState {
         
-        NextReceiver next_receiver;
+        [[no_unique_address]] NextReceiver next_receiver;
         [[no_unique_address]] std::tuple<Values...> values;
 
         template<class... Cont>
         void start(Cont&... cont){
-
-            auto lambda = [&](auto... args){
-                if constexpr(channel == Channel::value){
-                    return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
-                } else if (channel == Channel::error) {
-                    return ex::set_error.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
-                }
-            };
-
-            return std::apply(lambda, values);
+            return apply_set<channel>(values, next_receiver, cont...);
         }
     };
 

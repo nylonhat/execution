@@ -3,6 +3,7 @@
 
 #include "timer.hpp"
 #include "concepts.hpp"
+#include "manual_lifetime.hpp"
 
 namespace ex::algorithms::benchmark {
 
@@ -29,20 +30,18 @@ namespace ex::algorithms::benchmark {
 	
 		NextReceiver next_receiver;
 
-		union{
-			ChildOp child_op;
-		};
+		manual_lifetime<ChildOp> child_op;
 
 		Timer timer = {};
 	
 		OpState(ChildSender child_sender, SuffixReceiver suffix_receiver)
 			: next_receiver{suffix_receiver}
-			, child_op{ex::connect(child_sender, InfixReceiver{})}
+			, child_op{[&](){return ex::connect(child_sender, InfixReceiver{});}}
 		{}
 	
 		auto start(IsOpState auto&... cont){
 			timer.start();
-			return ex::start(child_op, cont...);
+			return ex::start(child_op.get(), cont...);
 		}
 
 	};

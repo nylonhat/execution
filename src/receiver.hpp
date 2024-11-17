@@ -22,17 +22,20 @@ namespace ex::concepts::set_value_cpo {
  
     
     struct Function {
-        inline constexpr auto operator()(this const Function&, HasMember auto& recvr, auto&...cont, auto&&... args) {
-            return recvr.template set_value<decltype(cont)...>(cont..., std::forward<decltype(args)>(args)...);
+        template<HasMember Recvr, class... Cont>
+        auto operator()(this const Function&, Recvr& recvr, Cont&...cont, auto... args) {
+            return recvr.template set_value<Cont...>(cont..., args...);
         }
 
         //auto operator()(this auto&&, HasFree auto& recvr, auto&...cont, auto&&...args){
         //    return set_value<decltype(recvr), decltype(cont)...>(recvr, cont..., args...);
         //}
 
-        auto operator()(this const Function&, HasAll auto& recvr, auto&...cont, auto&&... args){
-            return recvr.template set_value<decltype(cont)...>(cont..., args...);
-        }
+        //template<class Recvr, class... Cont, class... Args>
+        //inline constexpr auto operator()(this const Function&, Recvr& recvr, Cont&...cont, Args&&... args){
+            //return recvr.template set_value<decltype(cont)...>(cont..., args...);
+            //return recvr.template set_value<Cont...>(cont..., std::forward<Args>(args)...);
+        //}
     
     };
     
