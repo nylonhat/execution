@@ -23,6 +23,7 @@ namespace ex::algorithms::branch_all {
 	        if constexpr(!first_same_as<Next, Cont...>){
 			    if(old == 0){
 					return apply_set_value(base_op.tuple, base_op.next_receiver, cont...);
+					//return base_op.next_receiver.template set_value<Cont...>(cont..., get_result<0>(base_op.tuple), get_result<1>(base_op.tuple));
 			    }
 			}
 
@@ -86,7 +87,7 @@ namespace ex::algorithms::branch_all {
 		
 		template<IsReceiver SuffixReceiver>
 		auto connect(SuffixReceiver suffix_receiver){
-			auto lambda = [&](auto&&... child_senders){
+			auto lambda = [&](auto... child_senders){
 				return OpState{scheduler, suffix_receiver, child_senders...};
 			};
 
@@ -95,7 +96,7 @@ namespace ex::algorithms::branch_all {
 	};
 
 	struct FunctionObject {
-		
+
 		auto operator()(this auto&&, IsScheduler auto& scheduler, IsSender auto... senders){
 			auto handle = SchedulerHandle{scheduler};
 			
@@ -105,7 +106,7 @@ namespace ex::algorithms::branch_all {
 
 			return std::apply(lambda, std::tuple_cat((Sender{handle, senders}.tuple)...));		
 		}
-
+		
 	};
 
 	

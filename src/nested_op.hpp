@@ -44,7 +44,6 @@ namespace ex::algorithms::branch_all {
         constexpr static size_t index = Index;
 
         union {
-            manual_lifetime<Sender> sender;
             manual_lifetime<Op> op;
             Result result;
         };
@@ -52,18 +51,13 @@ namespace ex::algorithms::branch_all {
         [[no_unique_address]] Next next;
 
         NestedOp(Sender sender, auto... senders)
-            : sender{[&](){return sender;}}
+            : op{[&](){return ex::connect(sender, InfixReceiver{});}}
             , next{senders...}
         {}
     
         auto start(auto&... cont){
     		auto& base_op = get_base_op<BaseOp>(this);
-
-            //new (&op) Op (ex::connect(sender, InfixReceiver{}));
-            op.construct_from([&](){
-                return ex::connect(sender.get(), InfixReceiver{});                      
-            });
-
+            
             if constexpr(Index == BaseOp::size-1){
                 return ex::start(op.get(), cont...);
 
@@ -82,8 +76,8 @@ namespace ex::algorithms::branch_all {
     using OpTuple = NestedOp<0, BOP>;
 
     template<class Tuple, std::size_t... I, class Recvr, class... Cont>
-    constexpr auto apply_set_value_impl(Tuple&& t, std::index_sequence<I...>, Recvr& recvr, Cont&... cont){
-        return ex::set_value.operator()<Recvr, Cont...>(recvr, cont..., get_result<I>(std::forward<Tuple>(t))...);    
+    constexpr auto apply_set_value_impl(Tuple& t, std::index_sequence<I...>, Recvr& recvr, Cont&... cont){
+        return ex::set_value.operator()<Recvr, Cont...>(recvr, cont..., get_result<I>(t)...);    
     }
 
     template<class BaseOp, class Recvr, class... Cont>

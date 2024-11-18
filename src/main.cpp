@@ -6,7 +6,7 @@
 #include "pure.hpp"
 #include "sync.hpp"
 #include "benchmark.hpp"
-//#include "threadpool.hpp"
+#include "threadpool.hpp"
 #include "inline_scheduler.hpp"
 #include <print>
 
@@ -34,22 +34,22 @@ auto fib(auto& pool){
 	if constexpr(N < 2){ 
 		return ex::value(N);
 	}else{
-		return ex::branch_all(pool, fib<N-1>(pool), fib<N-2>(pool)) ;
+		return ex::branch_all(pool, fib<N-1>(pool), fib<N-2>(pool)) > add ;
 	}
 }
 
 int main(){
 	
-	//Threadpool<1> pool{};
+	Threadpool<1> pool{};
 	InlineScheduler ils{};
 	
-	//auto map_test = ex::value(42)  >= ex::value > add | ex::repeat_n(10000000) | ex::sync_wait;
-	//auto branch_all_test = ex::branch_all(ils, ex::value(1, 2) > add) | ex::sync_wait;
-	//auto repeat_test = ex::value(42) | ex::repeat_n(10) | ex::sync_wait;
-	//auto bind_stress = ex::value(5, 7) > add >= pure_stress<10> > ex::identity | ex::sync_wait;
-	//auto monadic = ex::value(42) > ex::value >= ex::identity | ex::sync_wait;
+	auto map_test = ex::value(42)  >= ex::value > add | ex::repeat_n(10000000) | ex::sync_wait;
+	auto branch_all_test = ex::branch_all(ils, ex::value(1, 2) > add) | ex::sync_wait;
+	auto repeat_test = ex::value(42) | ex::repeat_n(10) | ex::sync_wait;
+	auto bind_stress = ex::value(5, 7) > add >= pure_stress<10> > ex::identity | ex::sync_wait;
+	auto monadic = ex::value(42) > ex::value >= ex::identity | ex::sync_wait;
 
-	/*
+	///*
 	auto branch_bench = ex::value(42)
 		| ex::branch(pool, ex::value(69)) 
 	 	//| ex::branch(pool, ex::value(69)) 
@@ -59,8 +59,8 @@ int main(){
 		| ex::repeat_n(1000'000) 
 		| ex::benchmark 
 		| ex::sync_wait;
-	*/
-	/*
+	//*/
+	///*
 	auto conditional = ex::value(5) 
 		| ex::stay_if([](auto i){
 			return i > 9;
@@ -69,8 +69,8 @@ int main(){
 			return ex::value(8);
 		})
 		| ex::sync_wait;
-	*/
-	auto fib_test = fib<4>(ils) | ex::sync_wait;
+	//*/
+	auto fib_test = fib<6>(pool) | ex::sync_wait;
 	std::println("Final result: {}", fib_test);
 	
 	return 0;

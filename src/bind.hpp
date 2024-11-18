@@ -13,15 +13,7 @@ namespace ex::algorithms::bind {
 		template<IsOpState... Cont, class... Args>
 		auto set_value(Cont&... cont, Args... args){
 			if constexpr(channel == Channel::value){
-				//return start_next<Cont...>(cont..., args...);
-
-			using Sender2 = std::invoke_result_t<MonadicFunction, Args...>;
-			using Op2 = connect_t<Sender2, NextReceiver>;
-		
-			Sender2 sender2 = std::invoke(monadic_function, args...);
-			Op2* op2_ptr = reinterpret_cast<Op2*>(this);
-			Op2& op2 = *new (op2_ptr) Op2 (ex::connect(sender2, next_receiver));
-			return ex::start(op2, cont...);
+				return start_next<Cont...>(cont..., args...);
 			} else if (channel == Channel::error){
 				return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);			
 			}
