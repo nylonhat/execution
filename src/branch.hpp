@@ -6,10 +6,11 @@
 #include "nested_op.hpp"
 #include "concepts.hpp"
 
-namespace ex::algorithms::branch {
+namespace ex::algorithms::branch_all {
 
 	template<size_t Index, class BaseOp>
 	struct Receiver {
+        using Next = BaseOp::template IndexTuple<Index+1>;
 	    constexpr static size_t index = Index;
 
 		template<IsOpState... Cont>
@@ -18,16 +19,9 @@ namespace ex::algorithms::branch {
 	        get_result<Index>(base_op.tuple) = value;
 
 	        auto old = base_op.counter.fetch_sub(1);
-
-	        using Next = BaseOp::template IndexTuple<Index+1>;
         
 	        if constexpr(!first_same_as<Next, Cont...>){
 			    if(old == 0){
-					//auto lambda = [&](auto&&... values){
-					//	return ex::set_value.operator()<typename BaseOp::NextReceiver, Cont...>(base_op.next_receiver, cont..., std::forward<decltype(values)>(values)...);
-					//};
-
-					//return apply(lambda, base_op.tuple);
 					return apply_set_value(base_op.tuple, base_op.next_receiver, cont...);
 			    }
 			}
@@ -49,14 +43,9 @@ namespace ex::algorithms::branch {
 	    static constexpr size_t size = sizeof...(Senders);
 
 
-		[[no_unique_address]] NextReceiver next_receiver;
-	
+		[[no_unique_address]] NextReceiver next_receiver;	
 		Scheduler scheduler;
-
-	    union{
-	        Tuple tuple;
-	    };
-
+	    Tuple tuple;
 		std::atomic<std::int8_t> counter = size - 1;
 
 		OpState(Scheduler scheduler, SuffixReceiver suffix_receiver, Senders... senders)
@@ -68,7 +57,7 @@ namespace ex::algorithms::branch {
 		auto start(auto&... cont){
 		
 	        //if(scheduler.try_schedule(tuple)){
-	        //   return ::start(std::forward<decltype(cont)>(cont)...);
+	        //   return ::start(cont...);
 	        //}
 
 	        return ex::start(tuple, cont...);
@@ -124,11 +113,11 @@ namespace ex::algorithms::branch {
 
 namespace ex {
 
-		inline constexpr auto branch_all = algorithms::branch::FunctionObject{};
+		inline constexpr auto branch_all = algorithms::branch_all::FunctionObject{};
 
 }//namespace ex
 
-namespace ex::algorithms::branch::single {
+namespace ex::algorithms::branch {
 	
 	struct FunctionObject {
 		
@@ -150,7 +139,7 @@ namespace ex::algorithms::branch::single {
 
 namespace ex {
 
-	inline constexpr auto branch = algorithms::branch::single::FunctionObject{};
+	inline constexpr auto branch = algorithms::branch::FunctionObject{};
 	
 }//namespace ex
 

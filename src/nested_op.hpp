@@ -3,7 +3,7 @@
 
 #include "concepts.hpp"
 
-namespace ex::algorithms::branch {
+namespace ex::algorithms::branch_all {
 
     template<size_t Index, class T>
     constexpr auto& get_result(T& nested_op){

@@ -38,7 +38,7 @@ namespace ex {
     
     	auto sync_receiver = algorithms::sync_wait::Receiver{&result, &flag};
         auto op = ex::connect(sender, sync_receiver);
-    	//std::println("final op size: {} bytes", sizeof(op));
+    	std::println("final op size: {} bytes", sizeof(op));
 	
     	ex::start(op);
 
