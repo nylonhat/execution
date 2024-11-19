@@ -6,6 +6,7 @@
 #include <utility>
 #include <array>
 #include <random>
+#include <bit>
 
 #include "backoff.hpp"
 #include "queue.hpp"
@@ -19,7 +20,7 @@ private:
 	std::atomic<bool> running{true};
 	std::array<std::jthread, thread_count> threads;
 	std::array<Deque<OpHandle,4>, thread_count> local_queues{};
-	Queue<OpHandle, 16> common_queue{};
+	Queue<OpHandle, std::bit_ceil(thread_count*2)> common_queue{};
 
 	std::atomic<size_t> worker_count = 0;
 	inline thread_local static size_t worker_id = 0;
@@ -96,6 +97,15 @@ public:
 		return local_queues.at(worker_id).try_local_push(task);
 	}
 	
+};
+
+
+template<>
+struct Threadpool<0> {
+	
+	bool try_schedule(auto&&...){
+		return false;
+	}	
 };
 
 #endif

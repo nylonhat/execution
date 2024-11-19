@@ -23,7 +23,6 @@ namespace ex::algorithms::branch_all {
 	        if constexpr(!first_same_as<Next, Cont...>){
 			    if(old == 0){
 					return apply_set_value(base_op.tuple, base_op.next_receiver, cont...);
-					//return base_op.next_receiver.template set_value<Cont...>(cont..., get_result<0>(base_op.tuple), get_result<1>(base_op.tuple));
 			    }
 			}
 
@@ -44,7 +43,7 @@ namespace ex::algorithms::branch_all {
 	    static constexpr size_t size = sizeof...(Senders);
 
 
-		[[no_unique_address]] NextReceiver next_receiver;	
+		NextReceiver next_receiver;	
 		Scheduler scheduler;
 	    Tuple tuple;
 		std::atomic<std::int8_t> counter = size - 1;

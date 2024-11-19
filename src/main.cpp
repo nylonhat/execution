@@ -51,8 +51,8 @@ auto permute(){
 
 int main(){
 	
-	Threadpool<4> pool{};
-	InlineScheduler ils{};
+	Threadpool<3> pool{};
+	//InlineScheduler pool{};
 
 	//constexpr auto c = ex::value(99) | ex::start_constexpr;
 	
