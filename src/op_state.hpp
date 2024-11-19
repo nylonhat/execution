@@ -20,18 +20,18 @@ namespace ex::concepts::start_cpo {
  
     
     struct Function {
-        auto operator()(this auto&&){}
+        constexpr auto operator()(this auto&&){}
         
-        auto operator()(this auto&&, HasMember auto& op, auto&...cont){
+        constexpr auto operator()(this auto&&, HasMember auto& op, auto&...cont){
             return op.start(cont...);
         }
 
-        auto operator()(this auto&&, HasFree auto& op, auto&...cont){
+        constexpr auto operator()(this auto&&, HasFree auto& op, auto&...cont){
             return start(op, cont...);
         }
 
     
-        auto operator()(this auto&&, HasAll auto& op, auto&...cont){
+        constexpr auto operator()(this auto&&, HasAll auto& op, auto&...cont){
             return op.start(cont...);
         }
 

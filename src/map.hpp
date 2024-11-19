@@ -11,7 +11,7 @@ namespace ex::algorithms::map {
 	    [[no_unique_address]] Function function;
 
 		template<IsOpState... Cont>
-		void set_value(Cont&... cont, auto... args){
+		constexpr auto set_value(Cont&... cont, auto... args){
 			if constexpr(channel == Channel::value){
 				return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., function(args...));
 			} else if (channel == Channel::error){
@@ -20,7 +20,7 @@ namespace ex::algorithms::map {
 		}
 		
 		template<IsOpState... Cont>
-		void set_error(Cont&... cont, auto... args){
+		constexpr auto set_error(Cont&... cont, auto... args){
 			if constexpr(channel == Channel::value){
 				return ex::set_error.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
 			} else if (channel == Channel::error){
@@ -38,7 +38,7 @@ namespace ex::algorithms::map {
 	    [[no_unique_address]] Function function;
 
 		template<IsReceiver SuffixReceiver>
-	    auto connect(SuffixReceiver suffix_receiver){
+	    constexpr auto connect(SuffixReceiver suffix_receiver){
 			auto infix_receiver = Receiver<channel, SuffixReceiver, Function>{suffix_receiver, function};
 	        return ex::connect(child_sender, infix_receiver);
 	    }
@@ -48,12 +48,12 @@ namespace ex::algorithms::map {
 	template<Channel channel>
 	struct FunctionObject {
 		template<IsSender ChildSender, class Function>
-		auto operator()(this auto&&, ChildSender child_sender, Function function){
+		constexpr auto operator()(this auto&&, ChildSender child_sender, Function function){
 			return Sender<channel, ChildSender, Function>{child_sender, function};
 		}
 
 		template<class Function>
-		auto operator()(this auto&&, Function function){
+		constexpr auto operator()(this auto&&, Function function){
 			return [=]<IsSender ChildSender>(ChildSender child_sender){
 				return Sender<channel, ChildSender, Function>{child_sender, function};
 			};
@@ -70,7 +70,7 @@ namespace ex {
 }//namespace ex
 
 
-auto operator > (ex::IsSender auto sender, auto function){
+constexpr auto operator > (ex::IsSender auto sender, auto function){
     return ex::map_value(sender, function);
 }
 

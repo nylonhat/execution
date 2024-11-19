@@ -19,7 +19,7 @@ private:
 	std::atomic<bool> running{true};
 	std::array<std::jthread, thread_count> threads;
 	std::array<Deque<OpHandle,4>, thread_count> local_queues{};
-	Queue<OpHandle, thread_count*2> common_queue{};
+	Queue<OpHandle, 16> common_queue{};
 
 	std::atomic<size_t> worker_count = 0;
 	inline thread_local static size_t worker_id = 0;

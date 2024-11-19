@@ -26,7 +26,7 @@ namespace ex::algorithms::pure {
         [[no_unique_address]] std::tuple<Values...> values;
 
         template<class... Cont>
-        void start(Cont&... cont){
+        constexpr void start(Cont&... cont){
             return apply_set<channel>(values, next_receiver, cont...);
         }
     };
@@ -37,12 +37,12 @@ namespace ex::algorithms::pure {
         
         std::tuple<Values...> values;
 
-        Sender(auto... values)
+        constexpr Sender(auto... values)
             : values{values...}
         {}
 
         template<class NextReceiver>
-        auto connect(NextReceiver next_receiver){
+        constexpr auto connect(NextReceiver next_receiver){
             return OpState<channel, NextReceiver, Values...>{next_receiver, values};
         }
     };
@@ -51,7 +51,7 @@ namespace ex::algorithms::pure {
     struct FunctionObject {
 
         template<class... Values>
-        auto operator()(this auto&&, Values... values){
+        constexpr auto operator()(this auto&&, Values... values){
             return Sender<channel, Values...>{values...};
         }
     };

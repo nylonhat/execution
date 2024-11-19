@@ -23,7 +23,7 @@ namespace ex::concepts::set_value_cpo {
     
     struct Function {
         template<HasMember Recvr, class... Cont>
-        auto operator()(this const Function&, Recvr& recvr, Cont&...cont, auto... args) {
+        constexpr auto operator()(this const Function&, Recvr& recvr, Cont&...cont, auto... args) {
             return recvr.template set_value<Cont...>(cont..., args...);
         }
 
@@ -61,7 +61,7 @@ namespace ex::concepts::set_error_cpo {
  
     
     struct Function {
-        inline constexpr auto operator()(this const Function&, HasMember auto& recvr, auto&...cont, auto&&... args) {
+        constexpr auto operator()(this const Function&, HasMember auto& recvr, auto&...cont, auto&&... args) {
             return recvr.template set_error<decltype(cont)...>(cont..., std::forward<decltype(args)>(args)...);
         }
 
@@ -69,7 +69,7 @@ namespace ex::concepts::set_error_cpo {
         //    return set_value<decltype(recvr), decltype(cont)...>(recvr, cont..., args...);
         //}
 
-        auto operator()(this const Function&, HasAll auto& recvr, auto&...cont, auto&&... args){
+        constexpr auto operator()(this const Function&, HasAll auto& recvr, auto&...cont, auto&&... args){
             return recvr.template set_error<decltype(cont)...>(cont..., args...);
         }
     

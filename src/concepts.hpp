@@ -38,7 +38,7 @@ namespace ex {
     
 }//namespace ex
 
-auto operator | (ex::IsSender auto value, auto func){
+constexpr auto operator | (ex::IsSender auto value, auto func){
 	return func(value);
 }
 

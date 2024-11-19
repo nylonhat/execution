@@ -48,4 +48,45 @@ namespace ex {
 
 }//namespace ex
 
+
+namespace ex::algorithms::start_constexpr {
+
+    template<class Result>
+    struct Receiver {
+        Result* result;
+
+        constexpr auto set_value(auto&... cont, auto value){
+            *result = value;
+            ex::start(cont...);
+    		return;
+        }
+        
+        constexpr auto set_error(auto&... cont, auto error){
+                *result = Result{};
+                ex::start(cont...);
+        		return;
+            }
+        };
+
+}//namespace ex::algorithms::start_constexpr
+
+
+namespace ex {
+
+    inline constexpr auto start_constexpr = []<IsSender ChildSender>(ChildSender sender){
+        using Result = single_value_t<ChildSender>;
+        Result result;
+    
+    	auto receiver = algorithms::start_constexpr::Receiver{&result};
+        auto op = ex::connect(sender, receiver);
+	
+    	ex::start(op);
+
+        return result;
+    };
+
+}//namespace ex
+
+
+
 #endif//SYNC_H

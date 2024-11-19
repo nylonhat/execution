@@ -29,17 +29,17 @@ namespace ex::concepts::connect_cpo {
  
     
     struct Function {
-        auto operator()(this auto&&, HasMember auto&& sender, auto&& recvr){
+        constexpr auto operator()(this auto&&, HasMember auto&& sender, auto&& recvr){
             return sender.connect(recvr);
         }
 
 
-        auto operator()(this auto&&, HasFree auto&& sender, auto&& recvr){
+        constexpr auto operator()(this auto&&, HasFree auto&& sender, auto&& recvr){
             return connect(sender, recvr);
         }
 
         
-        auto operator()(this auto&&, HasAll auto&& sender, auto&& recvr){
+        constexpr auto operator()(this auto&&, HasAll auto&& sender, auto&& recvr){
             return sender.connect(recvr);
         }
         

@@ -11,7 +11,7 @@ namespace ex::algorithms::bind {
 		[[no_unique_address]] MonadicFunction monadic_function;
 
 		template<IsOpState... Cont, class... Args>
-		auto set_value(Cont&... cont, Args... args){
+		constexpr auto set_value(Cont&... cont, Args... args){
 			if constexpr(channel == Channel::value){
 				return start_next<Cont...>(cont..., args...);
 			} else if (channel == Channel::error){
@@ -20,7 +20,7 @@ namespace ex::algorithms::bind {
 		}
 
 		template<IsOpState... Cont, class... Args>
-		auto set_error(Cont&... cont, Args... args){
+		constexpr auto set_error(Cont&... cont, Args... args){
 			if constexpr(channel == Channel::value){
 				return ex::set_error.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
 			} else if(channel == Channel::error){
@@ -29,13 +29,14 @@ namespace ex::algorithms::bind {
 		}
 
 		template<IsOpState... Cont, class... Args>
-		auto start_next(Cont&... cont, Args... args){
+		constexpr auto start_next(Cont&... cont, Args... args){
 			using Sender2 = std::invoke_result_t<MonadicFunction, Args...>;
 			using Op2 = connect_t<Sender2, NextReceiver>;
 		
 			Sender2 sender2 = std::invoke(monadic_function, args...);
 			Op2* op2_ptr = reinterpret_cast<Op2*>(this);
-			Op2& op2 = *new (op2_ptr) Op2 (ex::connect(sender2, next_receiver));
+			auto next_receiver_copy = next_receiver;
+			Op2& op2 = *new (op2_ptr) Op2 (ex::connect(sender2, next_receiver_copy));
 			return ex::start(op2, cont...);
 		}
 	};
@@ -53,11 +54,11 @@ namespace ex::algorithms::bind {
 			Op2 op2;
 		};
 
-		OpState(Sender1 sender1, MonadicFunction monadic_function, SuffixReceiver suffix_receiver)
+		constexpr OpState(Sender1 sender1, MonadicFunction monadic_function, SuffixReceiver suffix_receiver)
 			: op1{ex::connect(sender1, InfixReceiver{suffix_receiver, monadic_function})}
 		{}
 
-		auto start(IsOpState auto&... cont){
+		constexpr auto start(IsOpState auto&... cont){
 			return ex::start(op1, cont...);
 		}
 	};
@@ -70,13 +71,13 @@ namespace ex::algorithms::bind {
 		[[no_unique_address]] Sender1 sender1;
 		[[no_unique_address]] MonadicFunction monadic_function;
 
-		Sender(Sender1 sender1, MonadicFunction monadic_function)
+		constexpr Sender(Sender1 sender1, MonadicFunction monadic_function)
 			: sender1{sender1}
 			, monadic_function{monadic_function}
 		{}
 		
 		template<IsReceiver SuffixReceiver>
-		auto connect(SuffixReceiver suffix_receiver){
+		constexpr auto connect(SuffixReceiver suffix_receiver){
 			return OpState<channel, Sender1, MonadicFunction, SuffixReceiver>{sender1, monadic_function, suffix_receiver};
 		}
 	};
@@ -84,12 +85,12 @@ namespace ex::algorithms::bind {
 	template<Channel channel>
 	struct Function {
 		template<IsSender Sender1, class MonadicFunction>
-		auto operator()(this auto&&, Sender1 sender1, MonadicFunction monadic_function){
+		constexpr auto operator()(this auto&&, Sender1 sender1, MonadicFunction monadic_function){
 			return Sender<channel, Sender1, MonadicFunction>{sender1, monadic_function};
 		}
 
 		template<class MonadicFunction>
-		auto operator()(this auto&&, MonadicFunction monadic_function){
+		constexpr auto operator()(this auto&&, MonadicFunction monadic_function){
 			return [=]<IsSender Sender1>(Sender1 sender1){
 				return Sender<channel, Sender1, MonadicFunction>{sender1, monadic_function};
 			};
