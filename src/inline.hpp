@@ -1,6 +1,9 @@
 #ifndef INLINE_HPP
 #define INLINE_HPP
 
+#include "concepts.hpp"
+#include <algorithm>
+
 namespace ex {
 
     template<class Receiver, class ChildOp>
@@ -8,9 +11,23 @@ namespace ex {
         {Receiver::make_for_child(op)} -> std::same_as<Receiver>;
     };
 
+    
+    template<class Derived, class Receiver>
+    struct InlinedReceiver {
+        [[no_unique_address]] Receiver receiver;
+        
+        InlinedReceiver(Receiver receiver)
+            : receiver{receiver}
+        {}
+
+        Receiver& get_receiver(){
+            return receiver;
+        }
+    };
+    
     template<class Derived, class Receiver>
         requires InlinableReceiver<Receiver, Derived>
-    struct InlinedReceiver {
+    struct InlinedReceiver<Derived, Receiver> {
         InlinedReceiver(Receiver receiver){}
 
         Receiver get_receiver(){
@@ -21,7 +38,7 @@ namespace ex {
 
     template<template<std::size_t> class Receiver, class... Senders, std::size_t... I>
     consteval auto max_op_size_impl(std::index_sequence<I...>){
-        return std::max(sizeof(ex::connect_t<Senders, Receiver<I>>)...);
+        return std::max({sizeof(ex::connect_t<Senders, Receiver<I>>)...});
     }
     
     template<template<std::size_t> class Receiver, class... Senders>
@@ -30,11 +47,22 @@ namespace ex {
     }
 
     
+    template<template<std::size_t> class Receiver, class... Senders, std::size_t... I>
+    consteval auto max_op_align_impl(std::index_sequence<I...>){
+        return std::max({alignof(ex::connect_t<Senders, Receiver<I>>)...});
+    }
+    
+    template<template<std::size_t> class Receiver, class... Senders>
+    consteval auto max_op_align(){
+        return max_op_align_impl<Receiver, Senders...>(std::index_sequence_for<Senders...>{});
+    }
+
+    
     template<class ParentOp, std::size_t ChildIndex, std::size_t StageIndex, class... ChildSenders>
     struct ManualChildOp {
 
         template <std::size_t VariantIndex>
-        class Receiver {
+        struct Receiver {
 
             ParentOp* parent_op;
 
@@ -53,17 +81,17 @@ namespace ex {
 
             template<class... Cont, class... Arg>
             auto set_value(Cont&... cont, Arg... arg){
-                return parent_op->template set_value<ChildIndex, VariantIndex, StageIndex, Cont..., Arg...>(cont..., arg...);
+                return parent_op->template set_value<ChildIndex, VariantIndex, StageIndex, Cont...>(cont..., arg...);
             }
 
             template<class... Cont, class... Arg>
             auto set_error(Cont&... cont, Arg... arg){
-                return parent_op->template set_error<ChildIndex, VariantIndex, StageIndex, Cont..., Arg...>(cont..., arg...);
+                return parent_op->template set_error<ChildIndex, VariantIndex, StageIndex, Cont...>(cont..., arg...);
             }
               
         };
         
-        std::array<std::byte, max_op_size<Receiver, ChildSenders...>()> storage;
+        alignas(max_op_align<Receiver, ChildSenders...>()) std::array<std::byte, max_op_size<Receiver, ChildSenders...>()> storage;
     
         ManualChildOp() = default;
         ManualChildOp(ChildSenders...[0] sender){
@@ -74,25 +102,27 @@ namespace ex {
         
         template<std::size_t Index>
         auto& construct_from(ChildSenders...[Index] sender){
-            using ChildOp = ex::connect_t<ChildSenders...[Index], Receiver>;
+            using ChildOp = ex::connect_t<ChildSenders...[Index], Receiver<Index>>;
             auto* parent_op = static_cast<ParentOp*>(this);
-            return *::new (&storage) ChildOp (ex::connect(sender, Receiver{parent_op}));
+            return *::new (&storage) ChildOp (ex::connect(sender, Receiver<Index>{parent_op}));
         }
 
         template<std::size_t Index>
         auto& get(){
-            using ChildOp = ex::connect_t<ChildSenders...[Index], Receiver>;
+            using ChildOp = ex::connect_t<ChildSenders...[Index], Receiver<Index>>;
             return *std::launder(reinterpret_cast<ChildOp*>(&storage));
         }
 
         template<std::size_t Index>
         void destruct(){
-            using ChildOp = ex::connect_t<ChildSenders...[Index], Receiver>;
-            get().~ChildOp();
+            using ChildOp = ex::connect_t<ChildSenders...[Index], Receiver<Index>>;
+            get<Index>().~ChildOp();
         }
-        
 
-        
+        template<std::size_t Index, class... Cont>
+        auto start(Cont&... cont){
+            return ex::start(get<Index>(), cont...);  
+        }
         
     };
 

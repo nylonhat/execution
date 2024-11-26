@@ -8,6 +8,7 @@
 #include "benchmark.hpp"
 #include "threadpool.hpp"
 #include "inline_scheduler.hpp"
+#include "inline.hpp"
 #include <print>
 #include <array>
 #include <algorithm>
@@ -41,7 +42,7 @@ auto fib(auto& pool){
 }
 
 auto permute(){
-	auto array = std::array{0,1,2,3,4,5,6,7,8,9,10,11,12};
+	auto array = std::array{0,1,2,3,4,5,6,7,8,9};
 	while(std::ranges::next_permutation(array).found){
 		
 	}
@@ -51,29 +52,27 @@ auto permute(){
 
 int main(){
 	
-	Threadpool<3> pool{};
+	//Threadpool<1> pool{};
 	//InlineScheduler pool{};
 
 	//constexpr auto c = ex::value(99) | ex::start_constexpr;
 	
-	//auto map_test = ex::value(42)  >= ex::value > add | ex::repeat_n(10'000'000) | ex::start_constexpr;
+	//auto map_test = ex::value(42) >= ex::value > add | ex::repeat_n(10'000'000) | ex::start_constexpr;
 	//auto branch_all_test = ex::branch_all(ils, ex::value(1, 2) > add) | ex::sync_wait;
 	//auto repeat_test = ex::value(42) | ex::repeat_n(10) | ex::sync_wait;
 	//auto bind_stress = ex::value(5, 7) > add >= pure_stress<50> > ex::identity | ex::start_constexpr;
 	//auto monadic = ex::value(42) > ex::value >= ex::identity | ex::sync_wait;
-
-	///*
+	auto inlined = ex::value(22) | ex::sync_wait2;
+	
+	/*
 	auto branch_bench = ex::value(4)
-		| ex::branch(pool, ex::value() > permute) 
-	 	| ex::branch(pool, ex::value() > permute) 
-		| ex::branch(pool, ex::value() > permute) 
-		| ex::branch(pool, ex::value() > permute) 
+		| ex::branch(pool, ex::value(42)) 
 		| ex::map_value(add)
 		//| ex::bind_value(ex::value)
-		| ex::repeat_n(1) 
+		| ex::repeat_n(100000000) 
 		| ex::benchmark 
 		| ex::sync_wait;
-	//*/
+	*/
 	/*
 	auto conditional = ex::value(5) 
 		| ex::stay_if([](auto i){
@@ -86,7 +85,9 @@ int main(){
 	*/
 	//auto fib_test = fib<10>(pool) | ex::sync_wait;
 	
-	std::println("Final result: {}", branch_bench);
+	//std::println("Final result: {}", branch_bench);
+
 	
-	return 0;
+	
+	return inlined;
 }
