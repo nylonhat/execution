@@ -23,20 +23,21 @@ namespace ex::concepts::set_value_cpo {
     
     struct Function {
         template<HasMember Recvr, class... Cont>
-        constexpr auto operator()(this const Function&, Recvr& recvr, Cont&...cont, auto... args) {
+        constexpr static auto operator()(Recvr& recvr, Cont&...cont, auto... args) {
             return recvr.template set_value<Cont...>(cont..., args...);
         }
 
-        //auto operator()(this auto&&, HasFree auto& recvr, auto&...cont, auto&&...args){
-        //    return set_value<decltype(recvr), decltype(cont)...>(recvr, cont..., args...);
-        //}
+        template<HasFree Recvr, class... Cont>
+        constexpr static auto operator()(Recvr& recvr, Cont&...cont, auto... args) {
+            return set_value<Recvr, Cont...>(recvr, cont..., args...);
+        }
 
-        //template<class Recvr, class... Cont, class... Args>
-        //inline constexpr auto operator()(this const Function&, Recvr& recvr, Cont&...cont, Args&&... args){
-            //return recvr.template set_value<decltype(cont)...>(cont..., args...);
-            //return recvr.template set_value<Cont...>(cont..., std::forward<Args>(args)...);
-        //}
-    
+        
+        template<HasAll Recvr, class... Cont>
+        constexpr static auto operator()(Recvr& recvr, Cont&...cont, auto... args) {
+            return recvr.template set_value<Cont...>(cont..., args...);
+        }
+            
     };
     
 }//namespace ex::concept::set_value_cpo
@@ -61,18 +62,23 @@ namespace ex::concepts::set_error_cpo {
  
     
     struct Function {
-        constexpr auto operator()(this const Function&, HasMember auto& recvr, auto&...cont, auto&&... args) {
-            return recvr.template set_error<decltype(cont)...>(cont..., std::forward<decltype(args)>(args)...);
+
+        template<HasMember Recvr, class... Cont>
+        constexpr static auto operator()(Recvr& recvr, Cont&...cont, auto... args) {
+            return recvr.template set_error<Cont...>(cont..., args...);
         }
 
-        //auto operator()(this auto&&, HasFree auto& recvr, auto&...cont, auto&&...args){
-        //    return set_value<decltype(recvr), decltype(cont)...>(recvr, cont..., args...);
-        //}
-
-        constexpr auto operator()(this const Function&, HasAll auto& recvr, auto&...cont, auto&&... args){
-            return recvr.template set_error<decltype(cont)...>(cont..., args...);
+        template<HasFree Recvr, class... Cont>
+        constexpr static auto operator()(Recvr& recvr, Cont&...cont, auto... args) {
+            return set_error<Recvr, Cont...>(recvr, cont..., args...);
         }
-    
+
+        
+        template<HasAll Recvr, class... Cont>
+        constexpr static auto operator()(Recvr& recvr, Cont&...cont, auto... args) {
+            return recvr.template set_error<Cont...>(cont..., args...);
+        }
+            
     };
     
 }//namespace ex::concept::set_error_cpo

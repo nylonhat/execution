@@ -60,7 +60,7 @@ namespace ex::algorithms::pure {
     struct FunctionObject {
 
         template<class... Values>
-        constexpr auto operator()(this auto&&, Values... values){
+        constexpr static auto operator()(Values... values){
             return Sender<channel, Values...>{values...};
         }
     };
