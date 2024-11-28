@@ -17,39 +17,44 @@ namespace ex::algorithms::repeat {
 	};
 
 	template<IsReceiver SuffixReceiver, IsSender ChildSender>
-	struct OpState {
-		using Self = OpState<SuffixReceiver, ChildSender>;
-		using InfixReceiver = Receiver<Self>;
-		using ChildOp = connect_t<ChildSender, InfixReceiver>;
-		using NextReceiver = SuffixReceiver;
-	
-		[[no_unique_address]] NextReceiver next_receiver;
-		manual_lifetime<ChildOp> child_op;
-		[[no_unique_address]] manual_lifetime<ChildSender> child_sender;
+	struct OpState 
+		: InlinedReceiver<OpState<SuffixReceiver, ChildSender>, SuffixReceiver>
+		, ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, 0, ChildSender>
+	{
+		using ChildOp = ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, 0, ChildSender>; 
+		
+		[[no_unique_address]] ChildSender child_sender;
 
 		std::size_t count = 0;
 		const std::size_t max = 0;
 
-		OpState(ChildSender child_sender, SuffixReceiver suffix_receiver, size_t iterations)
-			: next_receiver{suffix_receiver}
-			, child_sender{[&](){return child_sender;}}
+		OpState(SuffixReceiver suffix_receiver, ChildSender child_sender, size_t iterations)
+			: InlinedReceiver<OpState<SuffixReceiver, ChildSender>, SuffixReceiver>{suffix_receiver}
+			, ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, 0, ChildSender>{} 
+			, child_sender{child_sender}
 			, max{iterations}
 		{}
 	
-		template<IsOpState... Cont>
-		auto start(Cont&... cont){
+		template<class... Cont>
+		void start(Cont&... cont){
 			if(count < max){
 				count++;
-				//new (&child_op) ChildOp (ex::connect(child_sender, InfixReceiver{}));
-				child_op.construct_from([&](){
-					return ex::connect(child_sender.get(), InfixReceiver{});                       	
-                });
-				return ex::start(child_op.get(), cont...);
+				ChildOp::template construct_from<0>(child_sender);
+				return ChildOp::template start<0>(cont...);
 			}
 
-			return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., count);
+			return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., count);
 		}
 
+		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+        auto set_value(Cont&... cont, Arg... args){
+        	return this->start(cont...);
+        }
+
+		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+        auto set_error(Cont&... cont, Arg... args){
+			return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., count);
+        }
 	};
 
 	template<IsSender ChildSender>
@@ -59,7 +64,7 @@ namespace ex::algorithms::repeat {
 		size_t iterations;
 
 		auto connect(IsReceiver auto suffix_receiver){
-			return OpState{child_sender, suffix_receiver, iterations};
+			return OpState{suffix_receiver, child_sender, iterations};
 		}
 	};
 

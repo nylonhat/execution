@@ -23,18 +23,18 @@ namespace ex::concepts::set_value_cpo {
     
     struct Function {
         template<HasMember Recvr, class... Cont>
-        constexpr static auto operator()(Recvr& recvr, Cont&...cont, auto... args) {
+        constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return recvr.template set_value<Cont...>(cont..., args...);
         }
 
         template<HasFree Recvr, class... Cont>
-        constexpr static auto operator()(Recvr& recvr, Cont&...cont, auto... args) {
+        constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return set_value<Recvr, Cont...>(recvr, cont..., args...);
         }
 
         
         template<HasAll Recvr, class... Cont>
-        constexpr static auto operator()(Recvr& recvr, Cont&...cont, auto... args) {
+        constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return recvr.template set_value<Cont...>(cont..., args...);
         }
             
@@ -64,18 +64,18 @@ namespace ex::concepts::set_error_cpo {
     struct Function {
 
         template<HasMember Recvr, class... Cont>
-        constexpr static auto operator()(Recvr& recvr, Cont&...cont, auto... args) {
+        constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return recvr.template set_error<Cont...>(cont..., args...);
         }
 
         template<HasFree Recvr, class... Cont>
-        constexpr static auto operator()(Recvr& recvr, Cont&...cont, auto... args) {
+        constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return set_error<Recvr, Cont...>(recvr, cont..., args...);
         }
 
         
         template<HasAll Recvr, class... Cont>
-        constexpr static auto operator()(Recvr& recvr, Cont&...cont, auto... args) {
+        constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return recvr.template set_error<Cont...>(cont..., args...);
         }
             

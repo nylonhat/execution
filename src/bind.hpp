@@ -2,65 +2,64 @@
 #define BIND_H
 
 #include "concepts.hpp"
+#include "inline.hpp"
 
 namespace ex::algorithms::bind {
-	
-	template<Channel channel, IsReceiver NextReceiver, class MonadicFunction>
-	struct Receiver {
-		[[no_unique_address]] NextReceiver next_receiver;
-		[[no_unique_address]] MonadicFunction monadic_function;
-
-		template<IsOpState... Cont, class... Args>
-		constexpr auto set_value(Cont&... cont, Args... args){
-			if constexpr(channel == Channel::value){
-				return start_next<Cont...>(cont..., args...);
-			} else if (channel == Channel::error){
-				return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);			
-			}
-		}
-
-		template<IsOpState... Cont, class... Args>
-		constexpr auto set_error(Cont&... cont, Args... args){
-			if constexpr(channel == Channel::value){
-				return ex::set_error.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
-			} else if(channel == Channel::error){
-				return start_next<Cont...>(cont..., args...);
-			}
-		}
-
-		template<IsOpState... Cont, class... Args>
-		constexpr auto start_next(Cont&... cont, Args... args){
-			using Sender2 = std::invoke_result_t<MonadicFunction, Args...>;
-			using Op2 = connect_t<Sender2, NextReceiver>;
 		
-			Sender2 sender2 = std::invoke(monadic_function, args...);
-			Op2* op2_ptr = reinterpret_cast<Op2*>(this);
-			auto next_receiver_copy = next_receiver;
-			Op2& op2 = *new (op2_ptr) Op2 (ex::connect(sender2, next_receiver_copy));
-			return ex::start(op2, cont...);
-		}
-	};
-	
-	template<Channel channel, IsSender Sender1, class MonadicFunction, IsReceiver SuffixReceiver>
-	struct OpState {
-		using InfixReceiver = Receiver<channel, SuffixReceiver, MonadicFunction>;
-		using Op1 = connect_t<Sender1, InfixReceiver>;
+	template<Channel channel, IsReceiver SuffixReceiver, IsSender Sender1, class MonadicFunction>
+	struct OpState 
+		: InlinedReceiver<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, SuffixReceiver>
+		, ManualChildOp<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, 0, 0, Sender1, apply_values_t<MonadicFunction, Sender1>>
+	{
+		using Sender2 = apply_values_t<MonadicFunction, Sender1>;
+		using ChildOps = ManualChildOp<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, 0, 0, Sender1, Sender2>;
 
-		using Sender2 = apply_values_t<MonadicFunction, Sender1>; 
-		using Op2 = connect_t<Sender2, SuffixReceiver>;
-
-		union {
-			Op1 op1;
-			Op2 op2;
-		};
-
-		constexpr OpState(Sender1 sender1, MonadicFunction monadic_function, SuffixReceiver suffix_receiver)
-			: op1{ex::connect(sender1, InfixReceiver{suffix_receiver, monadic_function})}
+		[[no_unique_address]] MonadicFunction monadic_function;
+		
+		OpState(SuffixReceiver suffix_receiver, Sender1 sender1, MonadicFunction monadic_function)
+			: InlinedReceiver<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, SuffixReceiver>{suffix_receiver}
+			, ChildOps{sender1}
+			, monadic_function{monadic_function}
 		{}
 
-		constexpr auto start(IsOpState auto&... cont){
-			return ex::start(op1, cont...);
+		auto start(IsOpState auto&... cont){
+			return ChildOps::template start<0>(cont...);
 		}
+
+		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+			requires (VariantIndex == 0)
+        auto set_value(Cont&... cont, Arg... args){
+			if constexpr(channel == Channel::value){
+				ChildOps::template construct_from<1>(monadic_function(args...));
+				return ChildOps::template start<1>(cont...);
+			} else if (channel == Channel::error){
+				return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);			
+			}
+        }
+
+		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+			requires (VariantIndex == 0)
+        auto set_error(Cont&... cont, Arg... args){
+			if constexpr(channel == Channel::value){
+				return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);			
+			} else if (channel == Channel::error){
+				ChildOps::template construct_from<1>(monadic_function(args...));
+				return ChildOps::template start<1>(cont...);
+			}
+        }
+
+		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+			requires (VariantIndex == 1)
+        auto set_value(Cont&... cont, Arg... args){
+			return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);			
+        }
+
+		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+			requires (VariantIndex == 1)
+        auto set_error(Cont&... cont, Arg... args){
+			return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);			
+        }
+		
 	};
 
 	template<Channel channel, IsSender Sender1, class MonadicFunction>
@@ -78,7 +77,7 @@ namespace ex::algorithms::bind {
 		
 		template<IsReceiver SuffixReceiver>
 		constexpr auto connect(SuffixReceiver suffix_receiver){
-			return OpState<channel, Sender1, MonadicFunction, SuffixReceiver>{sender1, monadic_function, suffix_receiver};
+			return OpState<channel, SuffixReceiver, Sender1, MonadicFunction>{suffix_receiver, sender1, monadic_function};
 		}
 	};
 
