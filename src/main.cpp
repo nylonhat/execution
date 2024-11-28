@@ -57,7 +57,7 @@ int main(){
 
 	//constexpr auto c = ex::value(99) | ex::start_constexpr;
 	
-	auto map_test = ex::value(42) >= ex::value > add >= pure_stress<20> | ex::repeat_n(10'000'000) | ex::sync_wait2;
+	auto map_test = ex::value(42) >= ex::value > add >= pure_stress<1> | ex::repeat_n(10'000'000) | ex::sync_wait2;
 	//auto branch_all_test = ex::branch_all(ils, ex::value(1, 2) > add) | ex::sync_wait;
 	//auto repeat_test = ex::value(42) | ex::repeat_n(10) | ex::sync_wait;
 	//auto bind_stress = ex::value(5, 7) > add >= pure_stress<40> > ex::identity | ex::sync_wait2;

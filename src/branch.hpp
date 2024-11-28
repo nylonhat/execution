@@ -6,6 +6,9 @@
 #include "nested_op.hpp"
 #include "concepts.hpp"
 
+#include "inline.hpp"
+#include "pure.hpp"
+
 namespace ex::algorithms::branch_all {
 
 	template<size_t Index, class BaseOp>
@@ -64,6 +67,85 @@ namespace ex::algorithms::branch_all {
 		}
 
 	};
+
+	template<class...>
+	struct OpStateBase;
+
+	template<IsReceiver SuffixReceiver, IsScheduler Scheduler, IsSender... Senders, std::size_t... I>
+	struct OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>
+		: InlinedReceiver<OpState<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, SuffixReceiver>
+		, ManualChildOp<OpState<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, I, 0, decltype(ex::value(declval<Senders>())),Senders>...
+	{
+
+		using InlinedReceiverT = InlinedReceiver<OpState<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, SuffixReceiver>;
+
+		template<std::size_t ChildIndex>
+		using ChildOp = ManualChildOp<OpState<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...[ChildIndex]>, ChildIndex, 0, decltype(ex::value(declval<Senders...[ChildIndex]>())), Senders...[ChildIndex]>;
+
+		static constexpr std::size_t size = sizeof...(Senders);
+		
+		Scheduler scheduler;
+		std::atomic<std::int8_t> counter = size - 1;
+
+		OpStateBase(SuffixReceiver suffix_receiver, Scheduler scheduler, Senders... senders)
+			: InlinedReceiverT{suffix_receiver}
+			, ChildOp<I>{ex::value(senders)}...
+			, scheduler{scheduler}
+		{}
+
+		template<class... Cont>
+		auto start(Cont&... cont){
+			return ChildOp<0>::template start<0>(cont...);
+		}
+
+		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class ChildSender>
+			requires(VariantIndex == 0)
+        auto set_value(Cont&... cont, ChildSender child_sender){
+
+			auto& child_op = ChildOp<ChildIndex>::template construct_from<ChildIndex>(child_sender);
+        	auto& next_op = ChildOp<ChildIndex+1>::template get<0>();
+
+			if constexpr(ChildIndex == size - 1){
+				return ex::start(child_op, cont...);
+			} else {
+
+				if(scheduler.try_schedule(next_op)){
+	        		return ex::start(child_op, cont...);
+	        	}
+
+	        	return ex::start(child_op, next_op, cont...);	
+			}
+        }
+
+        
+		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Args>
+			requires(VariantIndex == 1)
+        auto set_value(Cont&... cont, Args... args){
+			//save args into ex::values op;
+	        auto old = base_op.counter.fetch_sub(1);
+
+			if constexpr(!std::same_as<cont...[0], decltype(ChildOp<ChildIndex+1>::template get<1>())>){
+				if(old == 0){
+					return finish(cont...);
+				}
+			}
+
+			return ex::start(cont...);
+        }
+
+        
+
+        template<class... Cont>
+        auto finish(Cont&... cont){
+        	return 
+        }
+		
+	};
+
+	template<IsReceiver SuffixReceiver, IsScheduler Scheduler, IsSender... Senders>
+	struct OpState2 
+		: OpStateBase<std::index_sequence_for<Senders...>, SuffixReceiver, Scheduler, Senders...>
+	{};
 	
 	template<IsScheduler Scheduler, IsSender... ChildSenders>
 	struct Sender {
