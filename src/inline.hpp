@@ -90,6 +90,9 @@ namespace ex {
             }
               
         };
+
+        template<std::size_t Index>
+        using VariantOp = ex::connect_t<ChildSenders...[Index], Receiver<Index>>;
         
         alignas(max_op_align<Receiver, ChildSenders...>()) std::array<std::byte, max_op_size<Receiver, ChildSenders...>()> storage;
     
@@ -102,21 +105,18 @@ namespace ex {
         
         template<std::size_t Index>
         auto& construct_from(ChildSenders...[Index] sender){
-            using ChildOp = ex::connect_t<ChildSenders...[Index], Receiver<Index>>;
             auto* parent_op = static_cast<ParentOp*>(this);
-            return *::new (&storage) ChildOp (ex::connect(sender, Receiver<Index>{parent_op}));
+            return *::new (&storage) VariantOp<Index> (ex::connect(sender, Receiver<Index>{parent_op}));
         }
 
         template<std::size_t Index>
         auto& get(){
-            using ChildOp = ex::connect_t<ChildSenders...[Index], Receiver<Index>>;
-            return *std::launder(reinterpret_cast<ChildOp*>(&storage));
+            return *std::launder(reinterpret_cast<VariantOp<Index>*>(&storage));
         }
 
         template<std::size_t Index>
         void destruct(){
-            using ChildOp = ex::connect_t<ChildSenders...[Index], Receiver<Index>>;
-            get<Index>().~ChildOp();
+            get<Index>().~VariantOp<Index>();
         }
 
         template<std::size_t Index, class... Cont>
@@ -124,10 +124,7 @@ namespace ex {
             return ex::start(get<Index>(), cont...);  
         }
         
-    };
-
-    
-
+    };   
     
 }
 

@@ -2,97 +2,91 @@
 #define NESTED_OP_H
 
 #include "concepts.hpp"
+#include "pure.hpp"
 
 namespace ex::algorithms::branch_all {
+    
+    template<class ParentOp, std::size_t ChildIndex, class ChildSender>
+    struct ManualChildResultOp {
 
-    template<size_t Index, class T>
-    constexpr auto& get_result(T& nested_op){
-        if constexpr (T::index == Index){
-            return nested_op.result;
-        }else{
-            return get_result<Index>(nested_op.next);
-        }
-    }
+        template <std::size_t VariantIndex>
+        struct Receiver {
 
-    template<size_t Index, class T>
-    consteval auto get_offset(){
-        if constexpr (T::index == Index){
-            return 0;
-        }else{
-            return offsetof(T, next) + get_offset<Index, typename T::Next>();
-        }
-    }
+            ParentOp* parent_op;
 
-    template<class BaseOp, class ChildOp>
-    auto& get_base_op(ChildOp* child_ptr){
-        auto total_offset = offsetof(BaseOp, tuple) + get_offset<ChildOp::index, typename BaseOp::Tuple>();
-        auto* offset_ptr = reinterpret_cast<std::byte*>(child_ptr) - total_offset;
-    	auto& base_op = *reinterpret_cast<BaseOp*>(offset_ptr);
-    	return base_op;
-    }
+            Receiver(ParentOp* parent_op)
+                : parent_op{parent_op}
+            {}
+         
+            template<class ChildOp>
+            static Receiver make_for_child(ChildOp* child_op){
+                auto* storage = reinterpret_cast<std::byte*>(child_op);
+                auto* self = reinterpret_cast<ManualChildResultOp*>(storage);
+                auto* parent_op = static_cast<ParentOp*>(self);
+                return Receiver{parent_op};           
+            }
 
 
-    template<size_t Index, class BaseOp>
-    struct NestedOp {
-        using Sender = std::tuple_element_t<Index, typename BaseOp::SenderTypeList>;
-        struct Empty{};
-        using Next = std::conditional_t<Index == BaseOp::size-1, Empty, NestedOp<Index+1, BaseOp>>;
-        using InfixReceiver =  BaseOp::template IndexRecvr<Index>;
-        using Op = connect_t<Sender, InfixReceiver>;
-        using Result = single_value_t<Sender>;
+            template<class... Cont, class... Arg>
+            auto set_value(Cont&... cont, Arg... arg){
+                return parent_op->template set_value<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
+            }
 
-        constexpr static size_t index = Index;
-
-        union {
-            manual_lifetime<Op> op;
-            Result result;
+            template<class... Cont, class... Arg>
+            auto set_error(Cont&... cont, Arg... arg){
+                return parent_op->template set_error<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
+            }
+          
         };
 
-        [[no_unique_address]] Next next;
 
-        NestedOp(Sender sender, auto... senders)
-            : op{[&](){return ex::connect(sender, InfixReceiver{});}}
-            , next{senders...}
-        {}
+        using SenderOp = ex::connect_t<decltype(ex::value(std::declval<ChildSender>())), Receiver<0>>;
+        using ChildOp = ex::connect_t<ChildSender, Receiver<1>>;
+        using Result = ex::single_value_t<ChildSender>;
     
-        auto start(auto&... cont){
-    		auto& base_op = get_base_op<BaseOp>(this);
-            
-            if constexpr(Index == BaseOp::size-1){
-                return ex::start(op.get(), cont...);
-
-            } else {
-                if(base_op.scheduler.try_schedule(next)){
-                    return ex::start(op.get(), cont...);
-                }
-
-                return ex::start(op.get(), next, cont...); 
-            }
+        alignas(SenderOp) alignas(ChildOp) alignas(Result) std::array<std::byte, std::max({sizeof(SenderOp), sizeof(ChildOp), sizeof(Result)})> storage;
+        
+        ManualChildResultOp() = default;
+        ManualChildResultOp(ChildSender child_sender){
+            auto* parent_op = static_cast<ParentOp*>(this);
+            ::new (&storage) SenderOp (ex::connect(ex::value(child_sender), Receiver<0>{parent_op}));
         }
     
+        ~ManualChildResultOp() = default;
+    
+        auto& construct_from(ChildSender child_sender){
+            auto* parent_op = static_cast<ParentOp*>(this);
+            return *::new (&storage) ChildOp (ex::connect(child_sender, Receiver<1>{parent_op}));
+        }
+
+        
+        auto& construct_result(Result result){
+            return *::new (&storage) Result (result);
+        }
+
+        auto& get_sender_op(){
+            return *std::launder(reinterpret_cast<SenderOp*>(&storage));
+        }
+
+        auto& get_child_op(){
+            return *std::launder(reinterpret_cast<ChildOp*>(&storage));
+        }
+
+        auto& get_result(){
+            return *std::launder(reinterpret_cast<Result*>(&storage));
+        }
+
+        template<class... Cont>
+        auto start_sender_op(Cont&... cont){
+            return ex::start(get_sender_op(), cont...);  
+        }
+
+        template<class... Cont>
+        auto start_child_op(Cont&... cont){
+            return ex::start(get_child_op(), cont...);  
+        }
+            
     };
-
-    template<class BOP>
-    using OpTuple = NestedOp<0, BOP>;
-
-    template<class Tuple, std::size_t... I, class Recvr, class... Cont>
-    constexpr auto apply_set_value_impl(Tuple& t, std::index_sequence<I...>, Recvr& recvr, Cont&... cont){
-        return ex::set_value.operator()<Recvr, Cont...>(recvr, cont..., get_result<I>(t)...);    
-    }
-
-    template<class BaseOp, class Recvr, class... Cont>
-    constexpr auto apply_set_value(OpTuple<BaseOp>& t, Recvr& recvr, Cont&... cont){
-        return apply_set_value_impl(std::forward<decltype(t)>(t), std::make_index_sequence<BaseOp::size>{}, recvr, cont...);
-    }
-
-    template<class... Pack>
-    concept empty_pack = sizeof...(Pack) == 0;
-
-    template<class... Pack>
-    using first_in_pack = std::remove_reference_t<std::tuple_element_t<0, std::tuple<Pack...>>>;
-
-    template<class T, class...Pack>
-    concept first_same_as = !empty_pack<Pack...> && std::same_as<first_in_pack<Pack...>, T>;
 
 }//namespace ex::algorithms::branch
 

@@ -1,6 +1,6 @@
 CXX := clang++
 CEXT := cpp
-CXXFLAGS := -O3  -g -Wall -std=c++26  -DNDEBUG  #-fsanitize=address #-ftemplate-depth=10000 #-fsanitize=thread
+CXXFLAGS := -O3  -g -Wall -std=c++26 -flto -DNDEBUG  #-fsanitize=address #-ftemplate-depth=10000 #-fsanitize=thread
 
 SRCPATH := ./src
 BINPATH := ./bin

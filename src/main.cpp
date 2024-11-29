@@ -41,6 +41,7 @@ auto fib(auto& pool){
 	}
 }
 
+/*
 auto permute(){
 	auto array = std::array{0,1,2,3,4,5,6,7,8,9};
 	while(std::ranges::next_permutation(array).found){
@@ -49,16 +50,19 @@ auto permute(){
 	return array.at(0);
 }
 
+*/
+
 
 int main(){
 	
-	//Threadpool<1> pool{};
+	Threadpool<1> pool{};
 	//InlineScheduler pool{};
 
 	//constexpr auto c = ex::value(99) | ex::start_constexpr;
 	
-	auto map_test = ex::value(42) >= ex::value > add >= pure_stress<1> | ex::repeat_n(10'000'000) | ex::sync_wait2;
-	//auto branch_all_test = ex::branch_all(ils, ex::value(1, 2) > add) | ex::sync_wait;
+	//auto map_test = ex::value(42) >= ex::value > add >= pure_stress<1> | ex::repeat_n(10'000'000) | ex::sync_wait2;
+	//auto branch_all_test = ex::branch_all(ils, ex::value(1, 2) > add) | ex::sync_wait2;
+	auto branch_all_test = ex::branch_all(pool, ex::value(1), ex::value(2)) > add | ex::repeat_n(100000000) | ex::benchmark | ex::sync_wait;
 	//auto repeat_test = ex::value(42) | ex::repeat_n(10) | ex::sync_wait;
 	//auto bind_stress = ex::value(5, 7) > add >= pure_stress<40> > ex::identity | ex::sync_wait2;
 	//auto monadic = ex::value(42) > ex::value >= ex::identity | ex::sync_wait;
@@ -85,9 +89,9 @@ int main(){
 	*/
 	//auto fib_test = fib<10>(pool) | ex::sync_wait;
 	
-	//std::println("Final result: {}", branch_bench);
+	std::println("Final result: {}", branch_all_test);
 
 	
 	
-	return map_test;
+	return 0;
 }

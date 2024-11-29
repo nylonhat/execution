@@ -3,46 +3,33 @@
 
 #include "timer.hpp"
 #include "concepts.hpp"
-#include "manual_lifetime.hpp"
+#include "inline.hpp"
 
 namespace ex::algorithms::benchmark {
-
-	template<class BaseOp>
-	struct Receiver {
-
-		template<class... Cont>
-		void set_value(Cont&... cont, auto count){
-			auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BaseOp, child_op);
-			auto& base_op = *reinterpret_cast<BaseOp*>(byte_p);
-
-			base_op.timer.stop();
-
-			return ex::set_value.operator()<typename BaseOp::NextReceiver, Cont...>(base_op.next_receiver, cont..., base_op.timer.count()/count);
-		}
-	};
-
-	template<IsReceiver SuffixReceiver, IsSender ChildSender>
-	struct OpState {
-		using Self = OpState<SuffixReceiver, ChildSender>;
-		using InfixReceiver = Receiver<Self>;
-		using ChildOp = connect_t<ChildSender, InfixReceiver>;
-		using NextReceiver = SuffixReceiver;
 	
-		NextReceiver next_receiver;
-
-		manual_lifetime<ChildOp> child_op;
-
+	template<IsReceiver SuffixReceiver, IsSender ChildSender>
+	struct OpState
+		: InlinedReceiver<OpState<SuffixReceiver, ChildSender>, SuffixReceiver>
+		, ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, 0, ChildSender>
+	{
+		using ChildOp =  ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, 0, ChildSender>;
 		Timer timer = {};
 	
-		OpState(ChildSender child_sender, SuffixReceiver suffix_receiver)
-			: next_receiver{suffix_receiver}
-			, child_op{[&](){return ex::connect(child_sender, InfixReceiver{});}}
+		OpState(SuffixReceiver suffix_receiver, ChildSender child_sender)
+			: InlinedReceiver<OpState<SuffixReceiver, ChildSender>, SuffixReceiver>{suffix_receiver}
+			, ChildOp{child_sender}
 		{}
 	
 		auto start(IsOpState auto&... cont){
 			timer.start();
-			return ex::start(child_op.get(), cont...);
+			return ChildOp::template start<0>(cont...);
 		}
+
+		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont>
+        auto set_value(Cont&... cont, auto count){
+			timer.stop();
+			return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., timer.count()/count);
+        }
 
 	};
 
@@ -52,7 +39,7 @@ namespace ex::algorithms::benchmark {
 		ChildSender child_sender;
 
 		auto connect(IsReceiver auto suffix_receiver){
-			return OpState{child_sender, suffix_receiver};
+			return OpState{suffix_receiver, child_sender};
 		}
 	};
 

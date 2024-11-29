@@ -7,80 +7,31 @@
 #include "concepts.hpp"
 
 #include "inline.hpp"
-#include "pure.hpp"
 
 namespace ex::algorithms::branch_all {
+	template<size_t A, size_t B>
+	concept same_index = (A == B);
 
-	template<size_t Index, class BaseOp>
-	struct Receiver {
-        using Next = BaseOp::template IndexTuple<Index+1>;
-	    constexpr static size_t index = Index;
+	template<size_t A, size_t B>
+	concept not_same_index = (A != B);
 
-		template<IsOpState... Cont>
-		auto set_value(Cont&... cont, auto value){
-			auto& base_op = get_base_op<BaseOp>(this);
-	        get_result<Index>(base_op.tuple) = value;
+	template<class... Pack>
+	concept not_empty_pack = sizeof...(Pack) != 0;
 
-	        auto old = base_op.counter.fetch_sub(1);
-        
-	        if constexpr(!first_same_as<Next, Cont...>){
-			    if(old == 0){
-					return apply_set_value(base_op.tuple, base_op.next_receiver, cont...);
-			    }
-			}
-
-			return ex::start(cont...);
-		}
-	};
-
-
-	template<IsScheduler Scheduler, IsReceiver SuffixReceiver, IsSender... Senders>
-	struct OpState {
-
-		using Self = OpState<Scheduler, SuffixReceiver, Senders...>;
-	    using NextReceiver = SuffixReceiver;
-	    template<size_t Index> using IndexRecvr = Receiver<Index, Self>;
-	    template<size_t Index> using IndexTuple = NestedOp<Index, Self>;
-	    using Tuple = OpTuple<Self>;
-	    using SenderTypeList = std::tuple<Senders...>;
-	    static constexpr size_t size = sizeof...(Senders);
-
-
-		NextReceiver next_receiver;	
-		Scheduler scheduler;
-	    Tuple tuple;
-		std::atomic<std::int8_t> counter = size - 1;
-
-		OpState(Scheduler scheduler, SuffixReceiver suffix_receiver, Senders... senders)
-			: next_receiver{suffix_receiver}
-			, scheduler{scheduler}
-	        , tuple{senders...}
-		{}
-
-		auto start(auto&... cont){
-		
-	        //if(scheduler.try_schedule(tuple)){
-	        //   return ::start(cont...);
-	        //}
-
-	        return ex::start(tuple, cont...);
-		}
-
-	};
+	template<class T, class... Pack>
+	concept first_same_as2 = std::same_as<Pack...[0], T>;
 
 	template<class...>
 	struct OpStateBase;
 
 	template<IsReceiver SuffixReceiver, IsScheduler Scheduler, IsSender... Senders, std::size_t... I>
 	struct OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>
-		: InlinedReceiver<OpState<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, SuffixReceiver>
-		, ManualChildOp<OpState<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, I, 0, decltype(ex::value(declval<Senders>())),Senders>...
+		: InlinedReceiver<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, SuffixReceiver>
+		, ManualChildResultOp<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, I, Senders>...
 	{
 
-		using InlinedReceiverT = InlinedReceiver<OpState<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, SuffixReceiver>;
-
-		template<std::size_t ChildIndex>
-		using ChildOp = ManualChildOp<OpState<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...[ChildIndex]>, ChildIndex, 0, decltype(ex::value(declval<Senders...[ChildIndex]>())), Senders...[ChildIndex]>;
+		using Receiver = InlinedReceiver<OpStateBase, SuffixReceiver>;
+		template<std::size_t ChildIndex> using ChildOp = ManualChildResultOp<OpStateBase, ChildIndex, Senders...[ChildIndex]>;
 
 		static constexpr std::size_t size = sizeof...(Senders);
 		
@@ -88,64 +39,73 @@ namespace ex::algorithms::branch_all {
 		std::atomic<std::int8_t> counter = size - 1;
 
 		OpStateBase(SuffixReceiver suffix_receiver, Scheduler scheduler, Senders... senders)
-			: InlinedReceiverT{suffix_receiver}
-			, ChildOp<I>{ex::value(senders)}...
+			: Receiver{suffix_receiver}
+			, ChildOp<I>{senders}...
 			, scheduler{scheduler}
 		{}
 
 		template<class... Cont>
 		auto start(Cont&... cont){
-			return ChildOp<0>::template start<0>(cont...);
+			return ChildOp<0>::start_sender_op(cont...);
 		}
 
-		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class ChildSender>
-			requires(VariantIndex == 0)
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class ChildSender>
+			requires same_index<VariantIndex, 0> && same_index<ChildIndex, size - 1>
         auto set_value(Cont&... cont, ChildSender child_sender){
-
-			auto& child_op = ChildOp<ChildIndex>::template construct_from<ChildIndex>(child_sender);
-        	auto& next_op = ChildOp<ChildIndex+1>::template get<0>();
-
-			if constexpr(ChildIndex == size - 1){
-				return ex::start(child_op, cont...);
-			} else {
-
-				if(scheduler.try_schedule(next_op)){
-	        		return ex::start(child_op, cont...);
-	        	}
-
-	        	return ex::start(child_op, next_op, cont...);	
-			}
+			
+			auto& child_op = ChildOp<ChildIndex>::construct_from(child_sender);
+			
+			return ex::start(child_op, cont...);
         }
 
-        
-		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Args>
-			requires(VariantIndex == 1)
-        auto set_value(Cont&... cont, Args... args){
-			//save args into ex::values op;
-	        auto old = base_op.counter.fetch_sub(1);
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class ChildSender>
+			requires same_index<VariantIndex, 0>
+        auto set_value(Cont&... cont, ChildSender child_sender){
 
-			if constexpr(!std::same_as<cont...[0], decltype(ChildOp<ChildIndex+1>::template get<1>())>){
-				if(old == 0){
-					return finish(cont...);
-				}
+			auto& child_op = ChildOp<ChildIndex>::construct_from(child_sender);
+        	auto& next_op = ChildOp<ChildIndex+1>::get_sender_op();
+
+			if(scheduler.try_schedule(next_op)){
+        		return ex::start(child_op, cont...);
+        	}
+
+        	return ex::start(child_op, next_op, cont...);	
+        }
+
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
+			requires same_index<VariantIndex, 1> 
+			&& not_same_index<ChildIndex, size - 1> //not last loop
+			&& not_empty_pack<Cont...>
+			&& first_same_as2<typename ChildOp<ChildIndex+1>::SenderOp, Cont...> //next loop was not scheduled
+        auto set_value(Cont&... cont, Args... args){
+        	ChildOp<ChildIndex>::construct_result(args...);
+	        counter.fetch_sub(1);
+			return ex::start(cont...);
+        }
+        
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
+			requires same_index<VariantIndex, 1>
+        auto set_value(Cont&... cont, Args... args){
+        	ChildOp<ChildIndex>::construct_result(args...);
+	        auto old = counter.fetch_sub(1);
+
+			if(old == 0){
+				return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., ChildOp<I>::get_result()...);
 			}
 
 			return ex::start(cont...);
         }
 
-        
-
-        template<class... Cont>
-        auto finish(Cont&... cont){
-        	return 
-        }
-		
 	};
 
 	template<IsReceiver SuffixReceiver, IsScheduler Scheduler, IsSender... Senders>
-	struct OpState2 
+	struct OpState 
 		: OpStateBase<std::index_sequence_for<Senders...>, SuffixReceiver, Scheduler, Senders...>
-	{};
+	{
+		OpState(SuffixReceiver suffix_receiver, Scheduler scheduler, Senders... senders)
+			: OpStateBase<std::index_sequence_for<Senders...>, SuffixReceiver, Scheduler, Senders...>{suffix_receiver, scheduler, senders...}
+		{}
+	};
 	
 	template<IsScheduler Scheduler, IsSender... ChildSenders>
 	struct Sender {
@@ -169,7 +129,8 @@ namespace ex::algorithms::branch_all {
 		template<IsReceiver SuffixReceiver>
 		auto connect(SuffixReceiver suffix_receiver){
 			auto lambda = [&](auto... child_senders){
-				return OpState{scheduler, suffix_receiver, child_senders...};
+				// return OpState{scheduler, suffix_receiver, child_senders...};
+				return OpState{suffix_receiver, scheduler, child_senders...};
 			};
 
 			return std::apply(lambda, tuple);

@@ -5,32 +5,7 @@
 #include "inline.hpp"
 
 namespace ex::algorithms::map {
-	/*
-	template<Channel channel, IsReceiver NextReceiver, class Function>
-	struct Receiver {
-		[[no_unique_address]] NextReceiver next_receiver;
-	    [[no_unique_address]] Function function;
-
-		template<IsOpState... Cont>
-		constexpr auto set_value(Cont&... cont, auto... args){
-			if constexpr(channel == Channel::value){
-				return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., function(args...));
-			} else if (channel == Channel::error){
-				return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
-			}
-		}
-		
-		template<IsOpState... Cont>
-		constexpr auto set_error(Cont&... cont, auto... args){
-			if constexpr(channel == Channel::value){
-				return ex::set_error.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
-			} else if (channel == Channel::error){
-				return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., function(args...));
-			}
-		}
-	}; 
-	*/
-
+	
 	template<Channel channel, class SuffixReceiver, IsSender ChildSender, class Function>
 	struct OpState
 		: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender, Function>, SuffixReceiver>
