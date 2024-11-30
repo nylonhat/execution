@@ -29,7 +29,8 @@ namespace ex::algorithms::branch_all {
 		: InlinedReceiver<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, SuffixReceiver>
 		, ManualChildResultOp<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, I, Senders>...
 	{
-
+		
+		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpStateBase, SuffixReceiver>;
 		template<std::size_t ChildIndex> using ChildOp = ManualChildResultOp<OpStateBase, ChildIndex, Senders...[ChildIndex]>;
 
@@ -50,7 +51,7 @@ namespace ex::algorithms::branch_all {
 		}
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class ChildSender>
-			requires same_index<VariantIndex, 0> && same_index<ChildIndex, size - 1>
+			requires same_index<VariantIndex, 0> && same_index<ChildIndex, size - 1> 
         auto set_value(Cont&... cont, ChildSender child_sender){
 			
 			auto& child_op = ChildOp<ChildIndex>::construct_from(child_sender);
@@ -59,7 +60,7 @@ namespace ex::algorithms::branch_all {
         }
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class ChildSender>
-			requires same_index<VariantIndex, 0>
+			requires same_index<VariantIndex, 0> && (ChildIndex != size -1)
         auto set_value(Cont&... cont, ChildSender child_sender){
 
 			auto& child_op = ChildOp<ChildIndex>::construct_from(child_sender);
@@ -109,6 +110,7 @@ namespace ex::algorithms::branch_all {
 	
 	template<IsScheduler Scheduler, IsSender... ChildSenders>
 	struct Sender {
+		using SenderOptIn = ex::SenderOptIn;
 		using value_t = values_join_t<ChildSenders...>;
 
 		Scheduler scheduler;

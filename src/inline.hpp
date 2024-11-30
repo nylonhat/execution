@@ -63,6 +63,7 @@ namespace ex {
 
         template <std::size_t VariantIndex>
         struct Receiver {
+            using ReceiverOptIn = ex::ReceiverOptIn;
 
             ParentOp* parent_op;
 

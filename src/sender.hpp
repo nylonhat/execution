@@ -7,39 +7,50 @@
 #include "op_state.hpp"
 #include "receiver.hpp"
 
-namespace ex::concepts::connect_cpo {
 
-    struct DummyRecvr{
-        auto set_value(auto&..., auto&&...){}
-        auto set_error(auto&..., auto&&...){}
+
+namespace ex {
+    struct SenderOptIn {};
+        
+    template<class T>
+    concept IsSender = requires(T t){
+        typename T::SenderOptIn;
     };
     
-    template<class T>
-    concept HasMember = requires(T t){
-        {t.connect(DummyRecvr{})} -> IsOpState<>;  
+}//namespace ex
+
+namespace ex::concepts::connect_cpo {
+    
+    template<class T, class R>
+    concept HasMember = requires(T t, R r){
+        {t.connect(r)} -> IsOpState<>;  
     };
 
-    template<class T>
-    concept HasFree = requires(T t){
-        {connect(t, DummyRecvr{})} -> IsOpState<>;  
+    template<class T, class R>
+    concept HasFree = requires(T t, R r){
+        {connect(t, r)} -> IsOpState<>;  
     };
 
-    template<class T>
-    concept HasAll = HasMember<T> && HasFree<T>;
+    template<class T, class R>
+    concept HasAll = HasMember<T, R> && HasFree<T, R>;
  
     
-    struct Function {
-        constexpr static auto operator()(HasMember auto&& sender, auto&& recvr){
+    struct FunctionObject {
+        template<class Sender, class Receiver>
+        requires HasMember<Sender, Receiver>
+        constexpr static auto operator()(Sender&& sender, Receiver&& recvr){
             return sender.connect(recvr);
         }
 
-
-        constexpr static auto operator()(HasFree auto&& sender, auto&& recvr){
+        template<class Sender, class Receiver>
+        requires HasFree<Sender, Receiver>
+        constexpr static auto operator()(Sender&& sender, Receiver&& recvr){
             return connect(sender, recvr);
         }
 
-        
-        constexpr static auto operator()(HasAll auto&& sender, auto&& recvr){
+        template<class Sender, class Receiver>
+        requires HasAll<Sender, Receiver>
+        constexpr static auto operator()(Sender&& sender, Receiver&& recvr){
             return sender.connect(recvr);
         }
         
@@ -49,12 +60,7 @@ namespace ex::concepts::connect_cpo {
 
 namespace ex {
     
-    inline constexpr auto connect = concepts::connect_cpo::Function{};
-    
-    template<class T>
-    concept IsSender = requires(T t){
-        {ex::connect(t, concepts::connect_cpo::DummyRecvr{})} -> IsOpState<>;  
-    };
+    inline constexpr auto connect = concepts::connect_cpo::FunctionObject{};    
     
 }//namespace ex
 

@@ -1,19 +1,28 @@
-
 #ifndef RECEIVER_HPP
 #define RECEIVER_HPP
 
+namespace ex {
+    struct ReceiverOptIn {};
+    
+    template<class T>
+    concept IsReceiver = requires(T t){
+        typename T::ReceiverOptIn;
+    };
+    
+}//namespace ex
 
 namespace ex::concepts::set_value_cpo {
 
+
     template<class T>
     concept HasMember = requires(T t){
-        //{t.set_value()} -> std::same_as<void>;  
+        // {t.template set_value<Cont...>(cont..., arg...)} -> std::same_as<void>;  
         t;
     };
 
     template<class T>
     concept HasFree = requires(T t){
-        //{set_value(t)} -> std::same_as<void>;  
+        // {set_value<T, Cont...>(t, cont..., arg...)} -> std::same_as<void>;  
         t;
     };
 
@@ -21,7 +30,7 @@ namespace ex::concepts::set_value_cpo {
     concept HasAll = HasMember<T> && HasFree<T>;
  
     
-    struct Function {
+    struct FunctionObject {
         template<HasMember Recvr, class... Cont>
         constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return recvr.template set_value<Cont...>(cont..., args...);
@@ -61,7 +70,7 @@ namespace ex::concepts::set_error_cpo {
     concept HasAll = HasMember<T> && HasFree<T>;
  
     
-    struct Function {
+    struct FunctionObject {
 
         template<HasMember Recvr, class... Cont>
         constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
@@ -86,14 +95,8 @@ namespace ex::concepts::set_error_cpo {
 
 namespace ex {
 
-    inline constexpr auto set_value = concepts::set_value_cpo::Function{};
-    inline constexpr auto set_error = concepts::set_error_cpo::Function{};
-
-    template<class T>
-    concept IsReceiver = requires(T t){
-        //{ex::set_value(t)} -> std::same_as<void>;  
-        t;
-    };
+    inline constexpr auto set_value = concepts::set_value_cpo::FunctionObject{};
+    inline constexpr auto set_error = concepts::set_error_cpo::FunctionObject{};
     
 }//namespace ex
 

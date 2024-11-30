@@ -3,35 +3,50 @@
 
 #include <concepts>
 
+namespace ex {
+    struct OpStateOptIn {};
+    
+    template<class T>
+    concept IsOpState = requires {
+        typename T::OpStateOptIn;
+    };
+    
+}//namespace ex
+
 namespace ex::concepts::start_cpo {
 
-    template<class T>
-    concept HasMember = requires(T t){
-        {t.start()} -> std::same_as<void>;  
+    template<class T, class... Cont>
+    concept HasMember = requires(T t, Cont&... cont){
+        {t.start(cont...)} -> std::same_as<void>;  
     };
 
-    template<class T>
-    concept HasFree = requires(T t){
-        {start(t)} -> std::same_as<void>;  
+    template<class T, class... Cont>
+    concept HasFree = requires(T t, Cont&... cont){
+        {start(t, cont...)} -> std::same_as<void>;  
     };
 
-    template<class T>
-    concept HasAll = HasMember<T> && HasFree<T>;
+    template<class T, class... Cont>
+    concept HasAll = HasMember<T, Cont...> && HasFree<T, Cont...>;
  
     
     struct Function {
         constexpr static auto operator()(){}
-        
-        constexpr static auto operator()(HasMember auto& op, auto&...cont){
+
+        template<IsOpState Op, IsOpState... Cont>
+        requires HasMember<Op, Cont...>
+        constexpr static auto operator()(Op& op, Cont&...cont){
             return op.start(cont...);
         }
 
-        constexpr static auto operator()(HasFree auto& op, auto&...cont){
+        template<IsOpState Op, IsOpState... Cont>
+        requires HasFree<Op, Cont...>
+        constexpr static auto operator()(Op& op, Cont&...cont){
             return start(op, cont...);
         }
 
-    
-        constexpr static auto operator()(HasAll auto& op, auto&...cont){
+        template<IsOpState Op, IsOpState... Cont>
+        requires HasAll<Op, Cont...>
+        constexpr static auto operator()(Op& op, Cont&...cont){
             return op.start(cont...);
         }
 
@@ -42,12 +57,7 @@ namespace ex::concepts::start_cpo {
 
 namespace ex {
 
-    inline constexpr auto start = concepts::start_cpo::Function{};
-    
-    template<class T>
-    concept IsOpState = requires(T t){
-        {ex::start(t)} -> std::same_as<void>;  
-    };
+    inline constexpr auto start = concepts::start_cpo::Function{};    
     
 }//namespace ex
 

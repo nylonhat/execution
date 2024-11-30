@@ -11,6 +11,8 @@ namespace ex::algorithms::bind {
 		: InlinedReceiver<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, SuffixReceiver>
 		, ManualChildOp<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, 0, Sender1, apply_values_t<MonadicFunction, Sender1>>
 	{
+
+		using OpStateOptIn = ex::OpStateOptIn;
 		using Sender2 = apply_values_t<MonadicFunction, Sender1>;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using ChildOps = ManualChildOp<OpState, 0, Sender1, Sender2>;
@@ -65,6 +67,7 @@ namespace ex::algorithms::bind {
 
 	template<Channel channel, IsSender Sender1, class MonadicFunction>
 	struct Sender {
+		using SenderOptIn = ex::SenderOptIn;
 		using value_t = apply_values_t<MonadicFunction, Sender1>::value_t;
 		//using error_t = apply_errors_t<MonadicFunction, Sender1>::error_t;
 

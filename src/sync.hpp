@@ -11,6 +11,7 @@ namespace ex::algorithms::sync_wait {
     struct OpState 
         : ManualChildOp<OpState<ChildSender>, 0, ChildSender>
     {
+		using OpStateOptIn = ex::OpStateOptIn;
         using ChildOp = ManualChildOp<OpState, 0, ChildSender>;
         using Result = single_value_t<ChildSender>;
 

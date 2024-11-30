@@ -12,7 +12,8 @@ namespace ex::algorithms::benchmark {
 		: InlinedReceiver<OpState<SuffixReceiver, ChildSender>, SuffixReceiver>
 		, ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, ChildSender>
 	{
-
+		
+		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using ChildOp =  ManualChildOp<OpState, 0, ChildSender>;
 		Timer timer = {};
@@ -37,6 +38,7 @@ namespace ex::algorithms::benchmark {
 
 	template<IsSender ChildSender>
 	struct Sender {
+		using SenderOptIn = ex::SenderOptIn;
 		using value_t = std::tuple<std::size_t>;
 		ChildSender child_sender;
 

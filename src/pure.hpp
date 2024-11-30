@@ -22,15 +22,15 @@ namespace ex::algorithms::pure {
     
     template<Channel channel, class NextReceiver, class... Values>
     struct OpState 
-        : public InlinedReceiver<OpState<channel, NextReceiver, Values...>, NextReceiver>
+        : InlinedReceiver<OpState<channel, NextReceiver, Values...>, NextReceiver>
     {
+		using OpStateOptIn = ex::OpStateOptIn;
+        using Receiver = InlinedReceiver<OpState, NextReceiver>;
         
-        //[[no_unique_address]] NextReceiver next_receiver;
         [[no_unique_address]] std::tuple<Values...> values;
 
         constexpr OpState(NextReceiver next_receiver, std::tuple<Values...> values)
-            //: next_receiver{next_receiver}
-            : InlinedReceiver<OpState<channel, NextReceiver, Values...>, NextReceiver>{next_receiver}
+            : Receiver{next_receiver}
             , values{values}
         {}
 
@@ -42,6 +42,7 @@ namespace ex::algorithms::pure {
 
     template<Channel channel, class... Values>
     struct Sender {
+		using SenderOptIn = ex::SenderOptIn;
         using value_t = std::tuple<Values...>;
         
         std::tuple<Values...> values;

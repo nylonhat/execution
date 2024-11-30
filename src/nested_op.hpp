@@ -11,6 +11,7 @@ namespace ex::algorithms::branch_all {
 
         template <std::size_t VariantIndex>
         struct Receiver {
+            using ReceiverOptIn = ex::ReceiverOptIn;
 
             ParentOp* parent_op;
 
@@ -40,7 +41,7 @@ namespace ex::algorithms::branch_all {
         };
 
 
-        using SenderOp = ex::connect_t<decltype(ex::value(std::declval<ChildSender>())), Receiver<0>>;
+        using SenderOp = ex::connect_t<std::invoke_result_t<decltype(ex::value), ChildSender>, Receiver<0>>;
         using ChildOp = ex::connect_t<ChildSender, Receiver<1>>;
         using Result = ex::single_value_t<ChildSender>;
     

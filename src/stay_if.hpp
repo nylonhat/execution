@@ -11,6 +11,7 @@ namespace ex::algorithms::stay_if {
 		, ManualChildOp<OpState<SuffixReceiver, Predicate, ChildSender>, 0, ChildSender>
 	{
 		
+		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using ChildOp =  ManualChildOp<OpState, 0, ChildSender>;
 
@@ -50,6 +51,7 @@ namespace ex::algorithms::stay_if {
 
 	template<IsSender ChildSender, class Predicate>
 	struct Sender {
+		using SenderOptIn = ex::SenderOptIn;
 		using value_t = ChildSender::value_t;
 		using error_t = ChildSender::value_t;
 		

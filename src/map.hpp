@@ -11,6 +11,7 @@ namespace ex::algorithms::map {
 		: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender, Function>, SuffixReceiver>
 		, ManualChildOp<OpState<channel, SuffixReceiver, ChildSender, Function>, 0, ChildSender> 
 	{ 
+		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using ChildOp = ManualChildOp<OpState, 0, ChildSender>;
 		
@@ -50,6 +51,7 @@ namespace ex::algorithms::map {
 
 	template<Channel channel, IsSender ChildSender, class Function>
 	struct Sender {
+		using SenderOptIn = ex::SenderOptIn;
 		using value_t = std::tuple<apply_values_t<Function, ChildSender>>;
 	    
 	    [[no_unique_address]] ChildSender child_sender;
