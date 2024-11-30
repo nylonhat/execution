@@ -2,26 +2,18 @@
 #define REPEAT_H
 
 #include "concepts.hpp"
-#include "manual_lifetime.hpp"
+#include "inline.hpp"
 
 namespace ex::algorithms::repeat {
-
-	template<typename BaseOp>
-	struct Receiver {
-		void set_value(auto&... cont, auto... args){
-			auto* byte_p = reinterpret_cast<std::byte*>(this) - offsetof(BaseOp, child_op);
-			auto& base_op = *reinterpret_cast<BaseOp*>(byte_p);
-
-			return ex::start(base_op, cont...);
-		}
-	};
 
 	template<IsReceiver SuffixReceiver, IsSender ChildSender>
 	struct OpState 
 		: InlinedReceiver<OpState<SuffixReceiver, ChildSender>, SuffixReceiver>
-		, ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, 0, ChildSender>
+		, ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, ChildSender>
 	{
-		using ChildOp = ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, 0, ChildSender>; 
+
+		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
+		using ChildOp = ManualChildOp<OpState, 0, ChildSender>; 
 		
 		[[no_unique_address]] ChildSender child_sender;
 
@@ -29,8 +21,8 @@ namespace ex::algorithms::repeat {
 		const std::size_t max = 0;
 
 		OpState(SuffixReceiver suffix_receiver, ChildSender child_sender, size_t iterations)
-			: InlinedReceiver<OpState<SuffixReceiver, ChildSender>, SuffixReceiver>{suffix_receiver}
-			, ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, 0, ChildSender>{} 
+			: Receiver{suffix_receiver}
+			, ChildOp{} 
 			, child_sender{child_sender}
 			, max{iterations}
 		{}
@@ -46,12 +38,12 @@ namespace ex::algorithms::repeat {
 			return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., count);
 		}
 
-		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         auto set_value(Cont&... cont, Arg... args){
         	return this->start(cont...);
         }
 
-		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         auto set_error(Cont&... cont, Arg... args){
 			return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., count);
         }

@@ -5,30 +5,47 @@
 
 namespace ex::algorithms::stay_if {
 
-	template<IsReceiver NextReceiver, class Predicate>
-	struct Receiver {
-		[[no_unique_address]] NextReceiver next_receiver;
-	    [[no_unique_address]] Predicate predicate;
-
-		template<IsOpState... Cont>
-		void set_value(Cont&... cont, auto... args){
-			if(std::invoke(predicate, args...)){
-				return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
-			}
-
-			return ex::set_error.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
-		}
-
+	template<class SuffixReceiver, class Predicate, class ChildSender>
+	struct OpState 
+		: InlinedReceiver<OpState<SuffixReceiver, Predicate, ChildSender>, SuffixReceiver>
+		, ManualChildOp<OpState<SuffixReceiver, Predicate, ChildSender>, 0, ChildSender>
+	{
 		
-		template<IsOpState... Cont>
-		void set_error(Cont&... cont, auto... args){
-			if(std::invoke(predicate, args...)){
-				return ex::set_error.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
-			}
-			
-			return ex::set_value.operator()<NextReceiver, Cont...>(next_receiver, cont..., args...);
+		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
+		using ChildOp =  ManualChildOp<OpState, 0, ChildSender>;
+
+		Predicate predicate;
+
+		OpState(SuffixReceiver suffix_receiver, Predicate predicate, ChildSender child_sender)
+			: Receiver{suffix_receiver}
+			, ChildOp{child_sender}
+			, predicate{predicate}
+		{}
+
+		template<class... Cont>
+		auto start(Cont&... cont){
+			return ChildOp::template start<0>(cont...);
 		}
-	};        
+
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
+        auto set_value(Cont&... cont, Arg... arg){
+        	if(std::invoke(predicate, arg...)){
+        		return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+        	}
+    		return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+        }
+
+        
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
+        auto set_error(Cont&... cont, Arg... arg){
+        	if(std::invoke(predicate, arg...)){
+        		return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+        	}
+    		return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+        }
+		
+		
+	};     
 
 
 	template<IsSender ChildSender, class Predicate>
@@ -40,8 +57,7 @@ namespace ex::algorithms::stay_if {
 	    [[no_unique_address]] Predicate predicate;
 
 	    auto connect(auto suffix_receiver){
-	        auto infix_receiver = Receiver{suffix_receiver, predicate};
-	        return ex::connect(child_sender, infix_receiver);
+	    	return OpState{suffix_receiver, predicate, child_sender};
 	    }
 
 	};

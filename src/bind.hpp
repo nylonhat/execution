@@ -9,15 +9,16 @@ namespace ex::algorithms::bind {
 	template<Channel channel, IsReceiver SuffixReceiver, IsSender Sender1, class MonadicFunction>
 	struct OpState 
 		: InlinedReceiver<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, SuffixReceiver>
-		, ManualChildOp<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, 0, 0, Sender1, apply_values_t<MonadicFunction, Sender1>>
+		, ManualChildOp<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, 0, Sender1, apply_values_t<MonadicFunction, Sender1>>
 	{
 		using Sender2 = apply_values_t<MonadicFunction, Sender1>;
-		using ChildOps = ManualChildOp<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, 0, 0, Sender1, Sender2>;
+		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
+		using ChildOps = ManualChildOp<OpState, 0, Sender1, Sender2>;
 
 		[[no_unique_address]] MonadicFunction monadic_function;
 		
 		OpState(SuffixReceiver suffix_receiver, Sender1 sender1, MonadicFunction monadic_function)
-			: InlinedReceiver<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, SuffixReceiver>{suffix_receiver}
+			: Receiver{suffix_receiver}
 			, ChildOps{sender1}
 			, monadic_function{monadic_function}
 		{}
@@ -26,7 +27,7 @@ namespace ex::algorithms::bind {
 			return ChildOps::template start<0>(cont...);
 		}
 
-		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
 			requires (VariantIndex == 0)
         auto set_value(Cont&... cont, Arg... args){
 			if constexpr(channel == Channel::value){
@@ -37,7 +38,7 @@ namespace ex::algorithms::bind {
 			}
         }
 
-		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
 			requires (VariantIndex == 0)
         auto set_error(Cont&... cont, Arg... args){
 			if constexpr(channel == Channel::value){
@@ -48,13 +49,13 @@ namespace ex::algorithms::bind {
 			}
         }
 
-		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
 			requires (VariantIndex == 1)
         auto set_value(Cont&... cont, Arg... args){
 			return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);			
         }
 
-		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
 			requires (VariantIndex == 1)
         auto set_error(Cont&... cont, Arg... args){
 			return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);			

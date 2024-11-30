@@ -58,7 +58,7 @@ namespace ex {
     }
 
     
-    template<class ParentOp, std::size_t ChildIndex, std::size_t StageIndex, class... ChildSenders>
+    template<class ParentOp, std::size_t ChildIndex, class... ChildSenders>
     struct ManualChildOp {
 
         template <std::size_t VariantIndex>
@@ -81,12 +81,12 @@ namespace ex {
 
             template<class... Cont, class... Arg>
             auto set_value(Cont&... cont, Arg... arg){
-                return parent_op->template set_value<ChildIndex, VariantIndex, StageIndex, Cont...>(cont..., arg...);
+                return parent_op->template set_value<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
             }
 
             template<class... Cont, class... Arg>
             auto set_error(Cont&... cont, Arg... arg){
-                return parent_op->template set_error<ChildIndex, VariantIndex, StageIndex, Cont...>(cont..., arg...);
+                return parent_op->template set_error<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
             }
               
         };

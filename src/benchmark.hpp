@@ -10,13 +10,15 @@ namespace ex::algorithms::benchmark {
 	template<IsReceiver SuffixReceiver, IsSender ChildSender>
 	struct OpState
 		: InlinedReceiver<OpState<SuffixReceiver, ChildSender>, SuffixReceiver>
-		, ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, 0, ChildSender>
+		, ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, ChildSender>
 	{
-		using ChildOp =  ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, 0, ChildSender>;
+
+		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
+		using ChildOp =  ManualChildOp<OpState, 0, ChildSender>;
 		Timer timer = {};
 	
 		OpState(SuffixReceiver suffix_receiver, ChildSender child_sender)
-			: InlinedReceiver<OpState<SuffixReceiver, ChildSender>, SuffixReceiver>{suffix_receiver}
+			: Receiver{suffix_receiver}
 			, ChildOp{child_sender}
 		{}
 	
@@ -25,7 +27,7 @@ namespace ex::algorithms::benchmark {
 			return ChildOp::template start<0>(cont...);
 		}
 
-		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont>
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
         auto set_value(Cont&... cont, auto count){
 			timer.stop();
 			return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., timer.count()/count);

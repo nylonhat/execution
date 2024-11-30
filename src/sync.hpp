@@ -9,26 +9,26 @@ namespace ex::algorithms::sync_wait {
 
     template<class ChildSender>
     struct OpState 
-        : ManualChildOp<OpState<ChildSender>, 0, 0, ChildSender>
+        : ManualChildOp<OpState<ChildSender>, 0, ChildSender>
     {
-
+        using ChildOp = ManualChildOp<OpState, 0, ChildSender>;
         using Result = single_value_t<ChildSender>;
 
         Result* result;
         std::binary_semaphore* flag;
         
         OpState(ChildSender child_sender, Result* result, std::binary_semaphore* flag)
-            : ManualChildOp<OpState<ChildSender>, 0, 0, ChildSender>{child_sender}
+            : ChildOp{child_sender}
             , result{result}
             , flag{flag}
         {}
 
         template<class... Cont>
         auto start(Cont&... cont){
-            return ManualChildOp<OpState<ChildSender>, 0, 0, ChildSender>::template start<0>(cont...);
+            return ChildOp::template start<0>(cont...);
         }
 
-        template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+        template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         auto set_value(Cont&... cont, Arg... arg){
             *result = arg...[0];
             ex::start(cont...);

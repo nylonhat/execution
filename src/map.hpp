@@ -9,23 +9,26 @@ namespace ex::algorithms::map {
 	template<Channel channel, class SuffixReceiver, IsSender ChildSender, class Function>
 	struct OpState
 		: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender, Function>, SuffixReceiver>
-		, ManualChildOp<OpState<channel, SuffixReceiver, ChildSender, Function>, 0, 0, ChildSender> 
+		, ManualChildOp<OpState<channel, SuffixReceiver, ChildSender, Function>, 0, ChildSender> 
 	{ 
+		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
+		using ChildOp = ManualChildOp<OpState, 0, ChildSender>;
+		
 		Function function;
 		
 		OpState(SuffixReceiver suffix_receiver, ChildSender child_sender, Function function)
-			: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender, Function>, SuffixReceiver>{suffix_receiver}
-			, ManualChildOp<OpState<channel, SuffixReceiver, ChildSender, Function>, 0, 0, ChildSender>{child_sender}
+			: Receiver{suffix_receiver}
+			, ChildOp{child_sender}
 			, function{function}
 		{}
 
 		template<class... Cont>
 		auto start(Cont&... cont){
-			return ManualChildOp<OpState<channel, SuffixReceiver, ChildSender, Function>, 0, 0, ChildSender>::template start<0>(cont...);
+			return ChildOp::template start<0>(cont...);
 		}
 
 
-		template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         auto set_value(Cont&... cont, Arg... args){
 			if constexpr(channel == Channel::value){
 				return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., function(args...));
@@ -34,7 +37,7 @@ namespace ex::algorithms::map {
 			}
         }
 
-        template<std::size_t ChildIndex, std::size_t VariantIndex, std::size_t StageIndex, class... Cont, class... Arg>
+        template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         auto set_error(Cont&... cont, Arg... args){
 			if constexpr(channel == Channel::value){
 				return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);
