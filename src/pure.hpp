@@ -6,55 +6,76 @@
 
 namespace ex::algorithms::pure {
     
-    template<Channel channel, class Tuple, std::size_t... I, class Recvr, class... Cont>
-    constexpr auto apply_set_impl(Tuple&& t, std::index_sequence<I...>, Recvr recvr, Cont&... cont){
-        if constexpr(channel == Channel::value){
-            return ex::set_value.operator()<Recvr, Cont...>(recvr, cont..., std::get<I>(std::forward<Tuple>(t))...);    
-        }else if (channel == Channel::error){
-            return ex::set_error.operator()<Recvr, Cont...>(recvr, cont..., std::get<I>(std::forward<Tuple>(t))...);    
-        }
-    }
+    template<size_t I, class T>
+    struct Leaf{
+        [[no_unique_address]] T member;
+    };
 
-    template<Channel channel, class Tuple, class Recvr, class... Cont>
-    constexpr auto apply_set(Tuple&& t, Recvr recvr, Cont&... cont){
-        return apply_set_impl<channel>(std::forward<Tuple>(t), std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>{}, recvr, cont...);
-    }
+    template<Channel channel, class...>
+    struct OpStateBase;
     
-    template<Channel channel, class NextReceiver, class... Values>
-    struct OpState 
-        : InlinedReceiver<OpState<channel, NextReceiver, Values...>, NextReceiver>
+    template<Channel channel, size_t... I, class NextReceiver, class... Values>
+    struct OpStateBase<channel, std::index_sequence<I...>, NextReceiver, Values...>
+        : InlinedReceiver<OpStateBase<channel, std::index_sequence<I...>, NextReceiver, Values...>, NextReceiver>
+        , Leaf<I, Values>...
     {
 		using OpStateOptIn = ex::OpStateOptIn;
-        using Receiver = InlinedReceiver<OpState, NextReceiver>;
+        using Receiver = InlinedReceiver<OpStateBase, NextReceiver>;
         
-        [[no_unique_address]] std::tuple<Values...> values;
-
-        constexpr OpState(NextReceiver next_receiver, std::tuple<Values...> values)
+        constexpr OpStateBase(NextReceiver next_receiver, Values... values)
             : Receiver{next_receiver}
-            , values{values}
+            , Leaf<I, Values>{values}...
         {}
 
         template<class... Cont>
         constexpr void start(Cont&... cont){
-            return apply_set<channel>(values, this->get_receiver(), cont...);
+            if constexpr(channel == Channel::value){
+                return ex::set_value.operator()<NextReceiver, Cont...>(this->get_receiver(), cont..., Leaf<I, Values>::member...);
+            } else if(channel == Channel::error){
+                return ex::set_error.operator()<NextReceiver, Cont...>(this->get_receiver(), cont..., Leaf<I, Values>::member...);
+            }
+        }
+    };
+
+    template<Channel channel, class NextReceiver, class... Values>
+    struct OpState 
+        : OpStateBase<channel, std::index_sequence_for<Values...>, NextReceiver, Values...>
+    {
+        OpState(NextReceiver next_receiver, Values... values)
+            : OpStateBase<channel, std::index_sequence_for<Values...>, NextReceiver, Values...>{next_receiver, values...}
+        {}    
+    };
+    
+
+    template<Channel channel, class...>
+    struct SenderBase;
+
+    template<Channel channel, size_t... I, class... Values>
+    struct SenderBase<channel, std::index_sequence<I...>, Values...>
+        : Leaf<I, Values>...
+    {
+        
+        using SenderOptIn = ex::SenderOptIn;
+        using value_t = std::tuple<Values...>;        
+
+        SenderBase(Values... values)
+            : Leaf<I, Values>{values}...
+        {}
+
+        template<class NextReceiver>
+        auto connect(NextReceiver next_receiver){
+            return OpState<channel, NextReceiver, Values...>{next_receiver, Leaf<I, Values>::member...};
         }
     };
 
     template<Channel channel, class... Values>
-    struct Sender {
-		using SenderOptIn = ex::SenderOptIn;
-        using value_t = std::tuple<Values...>;
-        
-        std::tuple<Values...> values;
-
-        constexpr Sender(auto... values)
-            : values{values...}
+    struct Sender 
+        : SenderBase<channel, std::index_sequence_for<Values...>, Values...>
+    {
+        Sender(Values... values)
+            : SenderBase<channel, std::index_sequence_for<Values...>, Values...>{values...}
         {}
 
-        template<class NextReceiver>
-        constexpr auto connect(NextReceiver next_receiver){
-            return OpState<channel, NextReceiver, Values...>{next_receiver, values};
-        }
     };
 
     template<Channel channel>
