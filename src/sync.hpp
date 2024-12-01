@@ -49,7 +49,7 @@ namespace ex {
         std::binary_semaphore flag{0};
     
     	auto sync_op = algorithms::sync_wait::OpState{child_sender, &result, &flag};
-    	//std::println("final op size: {} bytes", sizeof(op));
+    	std::println("final op size: {} bytes", sizeof(sync_op));
 	
     	ex::start(sync_op);
 

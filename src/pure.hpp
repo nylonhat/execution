@@ -7,17 +7,17 @@
 namespace ex::algorithms::pure {
     
     template<Channel channel, class Tuple, std::size_t... I, class Recvr, class... Cont>
-    constexpr auto apply_set_impl(Tuple&& t, std::index_sequence<I...>, Recvr&& recvr, Cont&... cont){
+    constexpr auto apply_set_impl(Tuple&& t, std::index_sequence<I...>, Recvr recvr, Cont&... cont){
         if constexpr(channel == Channel::value){
-            return ex::set_value.operator()<Recvr, Cont...>(std::forward<Recvr>(recvr), cont..., std::get<I>(std::forward<Tuple>(t))...);    
+            return ex::set_value.operator()<Recvr, Cont...>(recvr, cont..., std::get<I>(std::forward<Tuple>(t))...);    
         }else if (channel == Channel::error){
-            return ex::set_error.operator()<Recvr, Cont...>(std::forward<Recvr>(recvr), cont..., std::get<I>(std::forward<Tuple>(t))...);    
+            return ex::set_error.operator()<Recvr, Cont...>(recvr, cont..., std::get<I>(std::forward<Tuple>(t))...);    
         }
     }
 
     template<Channel channel, class Tuple, class Recvr, class... Cont>
-    constexpr auto apply_set(Tuple&& t, Recvr&& recvr, Cont&... cont){
-        return apply_set_impl<channel>(std::forward<Tuple>(t), std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>{}, std::forward<Recvr>(recvr), cont...);
+    constexpr auto apply_set(Tuple&& t, Recvr recvr, Cont&... cont){
+        return apply_set_impl<channel>(std::forward<Tuple>(t), std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>{}, recvr, cont...);
     }
     
     template<Channel channel, class NextReceiver, class... Values>

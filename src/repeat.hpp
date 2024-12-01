@@ -16,7 +16,7 @@ namespace ex::algorithms::repeat {
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using ChildOp = ManualChildOp<OpState, 0, ChildSender>; 
 		
-		[[no_unique_address]] ChildSender child_sender;
+		ChildSender child_sender;
 
 		std::size_t count = 0;
 		const std::size_t max = 0;

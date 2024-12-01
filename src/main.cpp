@@ -55,24 +55,28 @@ auto permute(){
 
 int main(){
 	
-	Threadpool<1> pool{};
+	Threadpool<0> pool{};
+	InlineScheduler ils{};
+
 
 	// auto map_test = ex::value(42) >= ex::value > add >= pure_stress<1> | ex::repeat_n(10'000'000) | ex::sync_wait;
 	// auto branch_all_test = ex::branch_all(pool, ex::value(1, 2) > add) | ex::sync_wait;
-	// auto branch_all_test2 = ex::branch_all(pool, ex::value(1), ex::value(2)) > add | ex::repeat_n(100'000'000) | ex::sync_wait;
+	// auto branch_all_test2 = ex::branch_all(pool, ex::value(1), ex::value(2)) | ex::repeat_n(100'000'000) | ex::sync_wait;
 	// auto repeat_test = ex::value(42) | ex::repeat_n(10) | ex::sync_wait;
 	// auto bind_stress = ex::value(5, 7) > add >= pure_stress<40> > ex::identity | ex::sync_wait;
 	// auto monadic = ex::value(42) > ex::value >= ex::identity | ex::sync_wait;
 	
-	/*
+	// /*
 	auto branch_bench = ex::value(4)
-		| ex::branch(pool, ex::value(42)) 
+		| ex::branch(ils, ex::value(42)) 
+		| ex::branch(ils, ex::value(42)) 
+		| ex::branch(ils, ex::value(42)) 
 		| ex::map_value(add)
-		//| ex::bind_value(ex::value)
-		| ex::repeat_n(100'000'000) 
-		| ex::benchmark 
+		// | ex::bind_value(ex::value)
+		// | ex::repeat_n(100'000'000) 
+		// | ex::benchmark 
 		| ex::sync_wait;
-	*/
+	// */
 	/*
 	auto conditional = ex::value(5) 
 		| ex::stay_if([](auto i){
@@ -81,11 +85,9 @@ int main(){
 	    | ex::bind_error([](auto i){
 			return ex::value(8);
 		})
-		| ex::sync_wait;
-	*/
-	auto fib_test = fib<5>(pool) | ex::sync_wait;
+		| ex::sync_wait	*/
+	//auto fib_test = fib<3>(pool) | ex::sync_wait;
 	
-	std::println("Final result: {}", fib_test);
-
+	std::println("Final result: {}", branch_bench);
 	return 0;
 }

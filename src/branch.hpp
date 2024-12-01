@@ -50,27 +50,24 @@ namespace ex::algorithms::branch_all {
 			return ChildOp<0>::start_sender_op(cont...);
 		}
 
+		
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class ChildSender>
-			requires same_index<VariantIndex, 0> && same_index<ChildIndex, size - 1> 
-        auto set_value(Cont&... cont, ChildSender child_sender){
-			
-			auto& child_op = ChildOp<ChildIndex>::construct_from(child_sender);
-			
-			return ex::start(child_op, cont...);
-        }
-
-		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class ChildSender>
-			requires same_index<VariantIndex, 0> && (ChildIndex != size -1)
+			requires same_index<VariantIndex, 0>
         auto set_value(Cont&... cont, ChildSender child_sender){
 
-			auto& child_op = ChildOp<ChildIndex>::construct_from(child_sender);
-        	auto& next_op = ChildOp<ChildIndex+1>::get_sender_op();
+        	if constexpr(ChildIndex == size - 1){
+				auto& child_op = ChildOp<ChildIndex>::construct_from(child_sender);
+				return ex::start(child_op, cont...);
+        	} else {
+				auto& child_op = ChildOp<ChildIndex>::construct_from(child_sender);
+	        	auto& next_op = ChildOp<ChildIndex+1>::get_sender_op();
+	
+				if(scheduler.try_schedule(next_op)){
+	        		return ex::start(child_op, cont...);
+	        	}
 
-			if(scheduler.try_schedule(next_op)){
-        		return ex::start(child_op, cont...);
+	        	return ex::start(child_op, next_op, cont...);
         	}
-
-        	return ex::start(child_op, next_op, cont...);	
         }
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
@@ -79,7 +76,7 @@ namespace ex::algorithms::branch_all {
 			&& not_empty_pack<Cont...>
 			&& first_same_as2<typename ChildOp<ChildIndex+1>::SenderOp, Cont...> //next loop was not scheduled
         auto set_value(Cont&... cont, Args... args){
-        	ChildOp<ChildIndex>::construct_result(args...);
+        	ChildOp<ChildIndex>::construct_result(args...[0]);
 	        counter.fetch_sub(1);
 			return ex::start(cont...);
         }
@@ -87,7 +84,8 @@ namespace ex::algorithms::branch_all {
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
 			requires same_index<VariantIndex, 1>
         auto set_value(Cont&... cont, Args... args){
-        	ChildOp<ChildIndex>::construct_result(args...);
+        	
+        	ChildOp<ChildIndex>::construct_result(args...[0]);
 	        auto old = counter.fetch_sub(1);
 
 			if(old == 0){

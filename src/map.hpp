@@ -15,7 +15,7 @@ namespace ex::algorithms::map {
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using ChildOp = ManualChildOp<OpState, 0, ChildSender>;
 		
-		Function function;
+		[[no_unique_address]] Function function;
 		
 		OpState(SuffixReceiver suffix_receiver, ChildSender child_sender, Function function)
 			: Receiver{suffix_receiver}
