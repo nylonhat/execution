@@ -7,7 +7,11 @@
 
 namespace ex {
 
-    static constexpr  auto identity = [](auto i){return i;};
+    constexpr inline  auto identity = [](auto i){return i;};
+    
+    constexpr inline auto add = [](auto... v) {
+    	return (... + v);
+    };
 
     template<typename Function, IsSender Sender>
     using apply_values_t = std::invoke_result_t<
