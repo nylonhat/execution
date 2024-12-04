@@ -4,6 +4,8 @@
 #include "../src/sync.hpp"
 #include "../src/repeat2.hpp"
 
+#include <atomic>
+
 namespace {
 
     TEST_CASE("repeat no times"){
@@ -48,7 +50,7 @@ namespace {
         };
 
         auto monadic_function = [count = 0](auto i) mutable {
-            return ex::value(++count);
+            return ex::value(++count) ;
         };
         
         auto result = ex::repeat2(ex::value(0), n_times, monadic_function) | ex::sync_wait;

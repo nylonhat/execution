@@ -57,7 +57,7 @@ TEST_CASE("repeat test"){
 TEST_CASE("conditional test"){
 	
 	auto result = ex::value(5) 
-		| ex::stay_if([](auto i){
+		| ex::value_else_error([](auto i){
 			return i > 9;
 		  }) 
 	    | ex::bind_error([](auto i){

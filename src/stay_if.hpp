@@ -3,12 +3,12 @@
 
 #include "concepts.hpp"
 
-namespace ex::algorithms::stay_if {
+namespace ex::algorithms::channel_else {
 
-	template<class SuffixReceiver, class Predicate, class ChildSender>
+	template<Channel channel, class SuffixReceiver, class Predicate, class ChildSender>
 	struct OpState 
-		: InlinedReceiver<OpState<SuffixReceiver, Predicate, ChildSender>, SuffixReceiver>
-		, ManualChildOp<OpState<SuffixReceiver, Predicate, ChildSender>, 0, ChildSender>
+		: InlinedReceiver<OpState<channel, SuffixReceiver, Predicate, ChildSender>, SuffixReceiver>
+		, ManualChildOp<OpState<channel, SuffixReceiver, Predicate, ChildSender>, 0, ChildSender>
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
@@ -30,48 +30,56 @@ namespace ex::algorithms::stay_if {
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         auto set_value(Cont&... cont, Arg... arg){
-        	if(std::invoke(predicate, arg...)){
-        		return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+        	if constexpr(channel == Channel::value){
+	        	if(!std::invoke(predicate, arg...)){
+	        		return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+	        	}
         	}
-    		return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+    		return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
         }
 
         
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         auto set_error(Cont&... cont, Arg... arg){
-        	if(std::invoke(predicate, arg...)){
-        		return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+        	if constexpr(channel == Channel::error){
+	        	if(!std::invoke(predicate, arg...)){
+	        		return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+	        	}
         	}
-    		return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+    		return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
         }
-		
 		
 	};     
 
 
-	template<IsSender ChildSender, class Predicate>
+	template<Channel channel, class Predicate, IsSender ChildSender>
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
 		using value_t = ChildSender::value_t;
 		using error_t = ChildSender::value_t;
 		
-	    [[no_unique_address]] ChildSender child_sender;
 	    [[no_unique_address]] Predicate predicate;
+	    [[no_unique_address]] ChildSender child_sender;
 
-	    auto connect(auto suffix_receiver){
-	    	return OpState{suffix_receiver, predicate, child_sender};
+		template<IsReceiver SuffixReceiver>
+	    auto connect(SuffixReceiver suffix_receiver){
+	    	return OpState<channel, SuffixReceiver, Predicate, ChildSender>{suffix_receiver, predicate, child_sender};
 	    }
 
 	};
 
-	struct Function {
-		auto operator()(this auto&&, IsSender auto child_sender, auto predicate){
-			return Sender{child_sender, predicate};
+	template<Channel channel>
+	struct FunctionObject {
+
+		template<class Predicate, IsSender ChildSender>
+		static auto operator()(ChildSender child_sender, Predicate predicate){
+			return Sender<channel, Predicate, ChildSender>{predicate, child_sender};
 		}
 
-		auto operator()(this auto&&, auto predicate){
-			return [=](IsSender auto child_sender){
-				return Sender{child_sender, predicate};
+		template<class Predicate>
+		static auto operator()(Predicate predicate){
+			return [=]<IsSender ChildSender>(ChildSender child_sender){
+				return Sender<channel, Predicate, ChildSender>{predicate, child_sender};
 			};
 		}
 	};
@@ -80,7 +88,8 @@ namespace ex::algorithms::stay_if {
 
 namespace ex {
 
-	inline constexpr auto stay_if = algorithms::stay_if::Function{};
+	inline constexpr auto value_else_error = algorithms::channel_else::FunctionObject<Channel::value>{};
+	inline constexpr auto error_else_value = algorithms::channel_else::FunctionObject<Channel::error>{};
 
 }//namespace ex
 
