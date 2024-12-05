@@ -17,7 +17,7 @@
 #include <array>
 #include <algorithm>
 
-constexpr inline auto add = [](auto... v) {
+constexpr auto add = [](auto... v) {
 	return (... + v);
 };
 
@@ -44,8 +44,14 @@ TEST_CASE("monadic"){
 	CHECK(result == 42);
 }
 
+
+TEST_CASE("map"){
+	auto result = ex::value(42) | ex::map_value([](auto i){return i * 2;}) | ex::sync_wait;
+	CHECK(result == 84);
+}
+
 TEST_CASE("map test"){
-	auto result = ex::value(42) >= ex::value > add | ex::repeat_n(10'000'000) | ex::sync_wait;
+	auto result = ex::value(42) | ex::map_value(add) | ex::repeat_n(10'000'000) | ex::sync_wait;
 	CHECK(result == 10'000'000);
 }
 
