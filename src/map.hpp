@@ -25,7 +25,7 @@ namespace ex::algorithms::map {
 
 		template<class... Cont>
 		auto start(Cont&... cont){
-			return ChildOp::template start<0>(cont...);
+			return ex::start(ChildOp::template get<0>(), cont...);
 		}
 
 

@@ -90,7 +90,9 @@ namespace ex::algorithms::pure {
 }//namespace ex::algorithms::pure
 
 namespace ex {
-
+    template<Channel channel>
+    inline constexpr auto pure = algorithms::pure::FunctionObject<channel>{};
+    
     inline constexpr auto value = algorithms::pure::FunctionObject<Channel::value>{};
     inline constexpr auto error = algorithms::pure::FunctionObject<Channel::error>{};
 

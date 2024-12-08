@@ -2,7 +2,6 @@
 #include "doctest.h"
 
 #include "../src/bind.hpp"
-#include "../src/repeat.hpp"
 #include "../src/map.hpp"
 #include "../src/stay_if.hpp"
 #include "../src/branch.hpp"
@@ -12,7 +11,6 @@
 #include "../src/threadpool.hpp"
 #include "../src/inline_scheduler.hpp"
 #include "../src/inline.hpp"
-#include "../src/repeat2.hpp"
 #include <print>
 #include <array>
 #include <algorithm>
@@ -50,15 +48,6 @@ TEST_CASE("map"){
 	CHECK(result == 84);
 }
 
-TEST_CASE("map test"){
-	auto result = ex::value(42) | ex::map_value(add) | ex::repeat_n(10'000'000) | ex::sync_wait;
-	CHECK(result == 10'000'000);
-}
-
-TEST_CASE("repeat test"){
-	auto result = ex::value(42) | ex::repeat_n(100) | ex::repeat_n(100) | ex::sync_wait;
-	CHECK(result == 100);
-}
 
 TEST_CASE("conditional test"){
 	

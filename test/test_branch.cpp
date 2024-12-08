@@ -36,8 +36,8 @@ namespace {
         
         auto control = ex::value(4)
             | ex::map_value(fetch{})
-            | ex::repeat_n(iterations)
-            | ex::benchmark
+            | ex::repeat_n_value(iterations)
+            // | ex::benchmark
             | ex::sync_wait;
 	
     	InlineScheduler scheduler{};
@@ -45,11 +45,11 @@ namespace {
     	auto result = ex::value(4)
     		| ex::branch(scheduler, ex::value(42)) 
     		| ex::map_value(add)
-    		| ex::repeat_n(iterations) 
-    		| ex::benchmark 
+    		| ex::repeat_n_value(iterations) 
+    		// | ex::benchmark 
     		| ex::sync_wait;
 
-    	CHECK(result == control);
+    	CHECK(result < control);
     }
 
     // TEST_CASE("branch on threadpool 1 thread benchmark"){

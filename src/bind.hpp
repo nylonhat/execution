@@ -26,15 +26,15 @@ namespace ex::algorithms::bind {
 		{}
 
 		auto start(IsOpState auto&... cont){
-			return ChildOps::template start<0>(cont...);
+			return ex::start(ChildOps::template get<0>(), cont...);
 		}
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
 			requires (VariantIndex == 0)
         auto set_value(Cont&... cont, Arg... args){
 			if constexpr(channel == Channel::value){
-				ChildOps::template construct_from<1>(monadic_function(args...));
-				return ChildOps::template start<1>(cont...);
+				auto& child_op2 = ChildOps::template construct_from<1>(monadic_function(args...));
+				return ex::start(child_op2, cont...);
 			} else if (channel == Channel::error){
 				return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);			
 			}
@@ -46,8 +46,8 @@ namespace ex::algorithms::bind {
 			if constexpr(channel == Channel::value){
 				return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);			
 			} else if (channel == Channel::error){
-				ChildOps::template construct_from<1>(monadic_function(args...));
-				return ChildOps::template start<1>(cont...);
+				auto& child_op2 = ChildOps::template construct_from<1>(monadic_function(args...));
+				return ex::start(child_op2, cont...);
 			}
         }
 
