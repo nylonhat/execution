@@ -4,13 +4,8 @@
 #include "../src/bind.hpp"
 #include "../src/map.hpp"
 #include "../src/stay_if.hpp"
-#include "../src/branch.hpp"
 #include "../src/pure.hpp"
 #include "../src/sync.hpp"
-#include "../src/benchmark.hpp"
-#include "../src/threadpool.hpp"
-#include "../src/inline_scheduler.hpp"
-#include "../src/inline.hpp"
 #include <print>
 #include <array>
 #include <algorithm>
@@ -19,14 +14,6 @@ constexpr auto add = [](auto... v) {
 	return (... + v);
 };
 
-template<size_t N>
-auto fib(auto& pool){
-	if constexpr(N < 2){ 
-		return ex::value(N);
-	}else{
-		return ex::branch_all(pool, fib<N-1>(pool), fib<N-2>(pool)) > add ;
-	}
-}
 
 auto permute(){
 	auto array = std::array{0,1,2,3,4,5,6,7,8,9};

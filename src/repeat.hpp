@@ -83,7 +83,7 @@ namespace ex::algorithms::repeat_while {
 		template<class Predicate, class MonadicFunction>
 		static auto operator()(Predicate predicate, MonadicFunction monadic_function){
 			return [=]<IsSender Sender1>(Sender1 sender1){
-				return Sender<channel, Sender1, Predicate, MonadicFunction>{sender1, predicate, monadic_function};
+				return FunctionObject::operator()(sender1, predicate, monadic_function);
 			};
 		}
 		
@@ -111,37 +111,23 @@ namespace ex::algorithms::repeat_n {
 	
 	template<Channel channel>
 	struct FunctionObject {
-
-		struct Loop {
-			const std::size_t iterations = 0;
-			std::size_t counter = 0;
-
-			Loop(std::size_t iterations)
-				: iterations{iterations}
-			{}
-
-			auto operator()(auto...){
-				return counter++ < iterations ? true : false;
-			}
-		};
-
-		template<class Sender>
-		struct MFunc {
-			Sender sender;
-
-			auto operator()(auto...){
-				return sender;
-			}
-		};
-		
+				
 		template<IsSender Sender1>
 		static auto operator()(Sender1 sender1, const std::size_t iterations){
-			return ex::repeat_while<channel>(ex::pure<channel>(0), Loop{iterations}, MFunc{sender1});
+			auto loop = [counter = iterations](auto...) mutable {
+				return counter-- > 0;
+			};
+
+			auto monadic_function = [sender1](auto...){
+				return sender1;
+			};
+			//                              TODO: What init value?
+			return ex::repeat_while<channel>(std::apply(ex::pure<channel>, typename Sender1::value_t{}), loop, monadic_function);
 		}
 
 		static auto operator()(const std::size_t iterations){
 			return [=]<IsSender Sender1>(Sender1 sender1){
-				return ex::repeat_while<channel>(ex::pure<channel>(0), Loop{iterations}, MFunc{sender1});
+				return FunctionObject::operator()(sender1, iterations);
 			};
 		}
 	};

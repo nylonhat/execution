@@ -17,7 +17,17 @@ namespace {
     	return (... + v);
     };
 
-    struct fetch {
+    
+    template<size_t N>
+    auto fib(auto& pool){
+    	if constexpr(N < 2){ 
+    		return ex::value(N);
+    	}else{
+    		return ex::branch_all(pool, fib<N-1>(pool), fib<N-2>(pool)) > add ;
+    	}
+    }
+
+    struct Fetch3 {
         __attribute__((noinline))
         static auto operator()(auto... v){
             volatile std::atomic<int8_t> a = 1;
@@ -28,16 +38,26 @@ namespace {
         }
     };
 
+    struct Fetch4 {
+        __attribute__((noinline))
+        static auto operator()(auto... v){
+            volatile std::atomic<int8_t> a = 1;
+            a.fetch_sub(1);
+            a.fetch_sub(1);
+            a.fetch_sub(1);
+            a.fetch_sub(1);
+            return (... + v);
+        }
+    };
     
-    TEST_CASE("branch: simple fork join with inline scheduler benchmark"){
+    TEST_CASE("Benchmark: branch with inline scheduler"){
 
         const size_t iterations = 10'000'000;
 
-        
         auto control = ex::value(4)
-            | ex::map_value(fetch{})
+            | ex::map_value(Fetch3{})
             | ex::repeat_n_value(iterations)
-            // | ex::benchmark
+            | ex::benchmark
             | ex::sync_wait;
 	
     	InlineScheduler scheduler{};
@@ -46,62 +66,32 @@ namespace {
     		| ex::branch(scheduler, ex::value(42)) 
     		| ex::map_value(add)
     		| ex::repeat_n_value(iterations) 
-    		// | ex::benchmark 
+    		| ex::benchmark 
     		| ex::sync_wait;
 
-    	CHECK(result < control);
+    	CHECK((result/iterations) < (control/iterations));
     }
 
-    // TEST_CASE("branch on threadpool 1 thread benchmark"){
-    // 	Threadpool<1> scheduler{};
+    TEST_CASE("Benchmark: branch on 1 thread"){
+    	Threadpool<1> scheduler{};
 	
-    //     const size_t iterations = 10'000'000;
-    //     // Deque<size_t, 4> deque{};
+        const size_t iterations = 10'000'000;
         
-    //     // Timer timer{};
-    //     // timer.start();
-    //     // for(size_t i = 0; i < iterations; i++){
-    //     //     std::atomic<int8_t> ref_count = 1;
-    //     //     ref_count.fetch_sub(1);
-    //     //     deque.try_local_push(1);
-    //     //     size_t data;
-    //     //     deque.try_local_pop(data);
-    //     //     ref_count.fetch_sub(1);
-    //     // }
-    //     // timer.stop();
-    //     // auto control = (timer.count()/iterations);
+        auto control = ex::value(4)
+            | ex::map_value(Fetch4{})
+            | ex::repeat_n_value(iterations)
+            | ex::benchmark
+            | ex::sync_wait;
 
-    //     // auto warm = ex::value(4)
-    //     //     | ex::map_value([](auto i){
-    //     //         std::atomic<int8_t> a = 1;
-    //     //         a.fetch_sub(1);
-    //     //         a.fetch_sub(1);
-    //     //         return i;               
-    //     //     })
-    //     //     | ex::repeat_n(iterations)
-    //     //     | ex::benchmark
-    //     //     | ex::sync_wait;
+    	auto result = ex::value(4)
+    		| ex::branch(scheduler, ex::value(42)) 
+    		| ex::map_value(add)
+    		| ex::repeat_n_value(iterations) 
+    		| ex::benchmark 
+    		| ex::sync_wait;
 
-    //     // auto control = ex::value(4)
-    //     //     | ex::map_value([](auto i){
-    //     //         std::atomic<int8_t> a = 1;
-    //     //         a.fetch_sub(1);
-    //     //         a.fetch_sub(1);
-    //     //         return i;               
-    //     //     })
-    //     //     | ex::repeat_n(iterations)
-    //     //     | ex::benchmark
-    //     //     | ex::sync_wait;
-
-    // 	auto result = ex::value(4)
-    // 		| ex::branch(scheduler, ex::value(42)) 
-    // 		| ex::map_value(add)
-    // 		| ex::repeat_n(iterations) 
-    // 		| ex::benchmark 
-    // 		| ex::sync_wait;
-
-    // 	// CHECK(result <= 0);
-    // }
+    	CHECK((result/iterations) <= (control/iterations));
+    }
 
 }//namespace
 
