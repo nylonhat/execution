@@ -3,9 +3,8 @@
 
 #include <atomic>
 #include "scheduler.hpp"
-#include "nested_op.hpp"
+#include "manual_child_result.hpp"
 #include "concepts.hpp"
-
 #include "inline.hpp"
 
 namespace ex::algorithms::branch_all {

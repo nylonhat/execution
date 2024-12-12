@@ -13,17 +13,31 @@ namespace ex {
     	return (... + v);
     };
 
-    template<typename Function, IsSender Sender>
-    using apply_values_t = std::invoke_result_t<
-        decltype(&std::apply<Function, typename Sender::value_t>), 
-        Function, typename Sender::value_t
-    >; 
+    enum class Channel {value, error};  
 
+    template<Channel channel, class T>
+    requires (channel == Channel::value)
+    typename T::value_t channel_t_impl();
+
+    template<Channel channel, class T>
+    requires (channel == Channel::error)
+    typename T::error_t channel_t_impl();
+
+    template<Channel channel, class T>
+    using channel_t = decltype(channel_t_impl<channel, T>());
+        
+    template<Channel channel, class Function, IsSender Sender>
+    using apply_channel_t = std::invoke_result_t<
+        decltype(&std::apply<Function, channel_t<channel, Sender>>), 
+        Function, channel_t<channel, Sender>
+    >;
+     
+        
     template<typename Function, IsSender Sender>
-    using apply_errors_t = std::invoke_result_t<
-        decltype(&std::apply<Function, typename Sender::error_t>), 
-        Function, typename Sender::error_t
-    >;       
+    using apply_values_t = apply_channel_t<Channel::value, Function, Sender>;
+    
+    template<typename Function, IsSender Sender>
+    using apply_errors_t = apply_channel_t<Channel::error, Function, Sender>;     
 
     template<IsSender... Senders>
     using values_join_t =  std::invoke_result_t<
@@ -34,11 +48,15 @@ namespace ex {
     template<IsSender Sender>
     using single_value_t = apply_values_t<decltype(identity), Sender>;
 
+    template<class Sender>
+    concept IsSingleValueSender = requires(Sender sender){
+        typename single_value_t<Sender>;
+    };
+
     template<IsSender Sender, IsReceiver Receiver>
     using connect_t = std::invoke_result_t<decltype(ex::connect), Sender, Receiver>;
 
     
-    enum class Channel {value, error};  
     
 }//namespace ex
 

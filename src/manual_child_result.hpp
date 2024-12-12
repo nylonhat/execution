@@ -1,12 +1,12 @@
-#ifndef NESTED_OP_H
-#define NESTED_OP_H
+#ifndef MANUAL_CHILD_RESULT_H
+#define MANUAL_CHILD_RESULT_H
 
 #include "concepts.hpp"
 #include "pure.hpp"
 
 namespace ex::algorithms::branch_all {
     
-    template<class ParentOp, std::size_t ChildIndex, class ChildSender>
+    template<class ParentOp, std::size_t ChildIndex, IsSingleValueSender ChildSender>
     struct ManualChildResultOp {
 
         template <std::size_t VariantIndex>
@@ -91,4 +91,4 @@ namespace ex::algorithms::branch_all {
 
 }//namespace ex::algorithms::branch
 
-#endif//NESTED_OP_H
+#endif//MANUAL_CHILD_RESULT_HPP

@@ -1,4 +1,5 @@
 #include "doctest.h"
+
 #include "../src/branch.hpp"
 #include "../src/map.hpp"
 #include "../src/pure.hpp"
@@ -7,7 +8,7 @@
 #include "../src/benchmark.hpp"
 #include "../src/threadpool.hpp"
 #include "../src/inline_scheduler.hpp"
-#include "../src/timer.hpp"
+
 #include <atomic>
 #include <iostream>
 

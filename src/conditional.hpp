@@ -1,7 +1,8 @@
-#ifndef STAY_IF_H
-#define STAY_IF_H
+#ifndef CONDITIONAL_HPP
+#define CONDITIONAL_HPP
 
 #include "concepts.hpp"
+#include "inline.hpp"
 
 namespace ex::algorithms::channel_else {
 
@@ -94,4 +95,4 @@ namespace ex {
 }//namespace ex
 
 
-#endif//STAY_IF_H
+#endif//CONDITIONAL_HPP
