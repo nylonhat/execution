@@ -36,6 +36,13 @@ namespace ex::algorithms::sync_wait {
             flag->release();
             return;
         }
+
+        template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
+        auto set_error(Cont&... cont, Arg... arg){
+            ex::start(cont...);
+            flag->release();
+            return;
+        }
     };
     
     

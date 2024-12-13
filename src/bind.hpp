@@ -65,10 +65,27 @@ namespace ex::algorithms::bind {
 		
 	};
 
+	template<Channel channel1, Channel channel2, IsSender Sender1, class MonadicFunction>
+	struct bind_channel;
+
+	template<Channel channel1, Channel channel2, IsSender Sender1, class MonadicFunction>
+	requires (channel1 == channel2)
+	struct bind_channel<channel1, channel2, Sender1, MonadicFunction>{
+		using type = channel_t<channel1, apply_channel_t<channel1, MonadicFunction, Sender1>>;
+	};
+
+	template<Channel channel1, Channel channel2, IsSender Sender1, class MonadicFunction>
+	requires (channel1 != channel2)
+	struct bind_channel<channel1, channel2, Sender1, MonadicFunction>{
+		using type = channel_t<channel1, Sender1>;
+	};
+
 	template<Channel channel, IsSender Sender1, class MonadicFunction>
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
-		using value_t = apply_values_t<MonadicFunction, Sender1>::value_t;
+		// using value_t = apply_values_t<MonadicFunction, Sender1>::value_t;
+		using value_t = bind_channel<Channel::value, channel, Sender1, MonadicFunction>::type;
+		using error_t = bind_channel<Channel::error, channel, Sender1, MonadicFunction>::type;
 		//using error_t = apply_errors_t<MonadicFunction, Sender1>::error_t;
 
 		[[no_unique_address]] Sender1 sender1;

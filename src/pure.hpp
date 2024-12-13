@@ -45,7 +45,21 @@ namespace ex::algorithms::pure {
             : OpStateBase<channel, std::index_sequence_for<Values...>, NextReceiver, Values...>{next_receiver, values...}
         {}    
     };
-    
+
+    template<Channel channel1, Channel channel2, class... Values>
+    struct pure_channel;
+
+    template<Channel channel1, Channel channel2, class... Values>
+    requires (channel1 == channel2)
+    struct pure_channel<channel1, channel2, Values...>{
+        using type = std::tuple<Values...>;
+    };
+
+    template<Channel channel1, Channel channel2, class... Values>
+    requires (channel1 != channel2)
+    struct pure_channel<channel1, channel2, Values...>{
+        using type = std::tuple<>;
+    };
 
     template<Channel channel, class...>
     struct SenderBase;
@@ -56,7 +70,8 @@ namespace ex::algorithms::pure {
     {
         
         using SenderOptIn = ex::SenderOptIn;
-        using value_t = std::tuple<Values...>;        
+        using value_t = pure_channel<Channel::value, channel, Values...>::type;        
+        using error_t = pure_channel<Channel::error, channel, Values...>::type;        
 
         SenderBase(Values... values)
             : Leaf<I, Values>{values}...

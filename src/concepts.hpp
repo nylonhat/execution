@@ -15,16 +15,21 @@ namespace ex {
 
     enum class Channel {value, error};  
 
-    template<Channel channel, class T>
-    requires (channel == Channel::value)
-    typename T::value_t channel_t_impl();
+    template<Channel channel, class S>
+    struct channel_t_impl {};
 
-    template<Channel channel, class T>
-    requires (channel == Channel::error)
-    typename T::error_t channel_t_impl();
+    template<class S>
+    struct channel_t_impl<Channel::value, S>{
+        using type = S::value_t;
+    };
 
-    template<Channel channel, class T>
-    using channel_t = decltype(channel_t_impl<channel, T>());
+    template<class S>
+    struct channel_t_impl<Channel::error, S>{
+        using type = S::error_t;
+    };
+
+    template<Channel channel, class S>
+    using channel_t = channel_t_impl<channel, S>::type;
         
     template<Channel channel, class Function, IsSender Sender>
     using apply_channel_t = std::invoke_result_t<

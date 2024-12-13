@@ -46,6 +46,8 @@ namespace ex::algorithms::benchmark {
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
 		using value_t = std::tuple<std::size_t>;
+		using error_t = std::tuple<std::size_t>;
+		
 		ChildSender child_sender;
 
 		auto connect(IsReceiver auto suffix_receiver){

@@ -48,11 +48,26 @@ namespace ex::algorithms::map {
         }		
 	};       
 
+	template<Channel channel1, Channel channel2, IsSender ChildSender, class Function>
+	struct map_channel;
+
+	template<Channel channel1, Channel channel2, IsSender ChildSender, class Function>
+	requires (channel1 == channel2)
+	struct map_channel<channel1, channel2, ChildSender, Function> {
+		using type = std::tuple<apply_channel_t<channel1, Function, ChildSender>>;
+	};
+
+	template<Channel channel1, Channel channel2, IsSender ChildSender, class Function>
+	requires (channel1 != channel2)
+	struct map_channel<channel1, channel2, ChildSender, Function> {
+		using type = channel_t<channel1, ChildSender>;
+	};
 
 	template<Channel channel, IsSender ChildSender, class Function>
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
-		using value_t = std::tuple<apply_values_t<Function, ChildSender>>;
+		using value_t = map_channel<Channel::value, channel, ChildSender, Function>::type;
+		using error_t = map_channel<Channel::error, channel, ChildSender, Function>::type;
 	    
 	    [[no_unique_address]] ChildSender child_sender;
 	    [[no_unique_address]] Function function;

@@ -61,7 +61,8 @@ namespace ex::algorithms::repeat_while {
 	template<Channel channel, IsSender ChildSender1, class Predicate, class MonadicFunction>
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
-		using value_t = apply_values_t<MonadicFunction, ChildSender1>::value_t;
+		using value_t = ChildSender1::value_t;
+		using error_t = ChildSender1::error_t;
 
 		ChildSender1 child_sender1;
 		Predicate predicate;

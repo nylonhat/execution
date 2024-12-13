@@ -109,6 +109,7 @@ namespace ex::algorithms::branch_all {
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
 		using value_t = values_join_t<ChildSenders...>;
+		using error_t = ChildSenders...[0]::error_t;
 
 		Scheduler scheduler;
 		std::tuple<ChildSenders...> tuple;
