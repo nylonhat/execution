@@ -16,7 +16,7 @@ namespace ex {
     enum class Channel {value, error};  
 
     template<Channel channel, class S>
-    struct channel_t_impl {};
+    struct channel_t_impl;
 
     template<class S>
     struct channel_t_impl<Channel::value, S>{

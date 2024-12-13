@@ -83,10 +83,8 @@ namespace ex::algorithms::bind {
 	template<Channel channel, IsSender Sender1, class MonadicFunction>
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
-		// using value_t = apply_values_t<MonadicFunction, Sender1>::value_t;
 		using value_t = bind_channel<Channel::value, channel, Sender1, MonadicFunction>::type;
 		using error_t = bind_channel<Channel::error, channel, Sender1, MonadicFunction>::type;
-		//using error_t = apply_errors_t<MonadicFunction, Sender1>::error_t;
 
 		[[no_unique_address]] Sender1 sender1;
 		[[no_unique_address]] MonadicFunction monadic_function;
