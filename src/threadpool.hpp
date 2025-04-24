@@ -1,111 +1,109 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
 
-#include <atomic>
-#include <thread>
-#include <utility>
-#include <array>
-#include <random>
-#include <bit>
-
-#include "backoff.hpp"
-#include "queue.hpp"
-#include "deque.hpp"
 #include "scheduler.hpp"
+#include "concepts.hpp"
+#include "inline.hpp"
+#include "pure.hpp"
 
+#include "bounded_threadpool.hpp"
 
-template<std::size_t thread_count>
-struct Threadpool {
-private:
-	std::atomic<bool> running{true};
-	std::array<std::jthread, thread_count> threads;
-	std::array<Deque<OpHandle,4>, thread_count> local_queues{};
-	Queue<OpHandle, std::bit_ceil(thread_count*2)> common_queue{};
-
-	std::atomic<size_t> worker_count = 0;
-	inline thread_local static size_t worker_id = 0;
-	inline thread_local static Threadpool* parent_threadpool = nullptr;
+namespace ex {
 	
-public:
-	//Constructor
-	Threadpool(){
-		for (auto& thread : threads){
-			thread = std::jthread(&Threadpool::work, this);
-		}
-	}
-
-	//Destructor
-	~Threadpool(){
-		running.store(false);
-	}
 	
-private:	
-	void work(){
+	template<std::size_t thread_count>
+	struct Threadpool {
 		
-		//Backoff backoff;
+		struct OpHandle {
+			void* type_ptr = nullptr;
+			void (*resume_ptr)(void*) = [](void*){};
 
-		//assign each worker a unique id representing queue index
-		parent_threadpool = this;
-		worker_id = worker_count.fetch_add(1);
+			OpHandle() = default;
 
-		//create random distribution for stealing
-		std::minstd_rand random_generator{std::random_device{}()};
-		std::uniform_int_distribution<int> distribution(0, thread_count - 1);
+			template<class O>
+			OpHandle(O& op)
+				: type_ptr{std::addressof(op)}
+				, resume_ptr{[](void* type_ptr){
+					O& op = *static_cast<O*>(type_ptr);
+					return op.resume();
+				}} 
+			{}
 
-		while(running.load()){
+			OpHandle(OpHandle& rhs) = default;
 
-			OpHandle task;
-			//dequeue from threads own queue first 
-			if(local_queues.at(worker_id).try_local_pop(task)){
-				task.start();
-				continue;
+			void operator()(){
+				return resume_ptr(type_ptr);
 			}
+		};
 		
-			if(common_queue.try_dequeue(task)){
-				task.start();
-				continue;
-			}
-	
-			//try to steal from other random queues
-			for(size_t i = 0; i < thread_count; i++){
-				int random_index = distribution(random_generator);
+		using Pool = BoundedThreadpool<thread_count, OpHandle>;
 		
-				if(local_queues.at(random_index).try_steal(task)){
-					task.start();
-					//backoff.reset();
-					break;
+		template<class NextReceiver>
+		struct OpState 
+			: ex::InlinedReceiver<OpState<NextReceiver>, NextReceiver>
+		{
+			using OpStateOptIn = ex::OpStateOptIn;
+			using Receiver = ex::InlinedReceiver<OpState, NextReceiver>;
+
+			Pool* pool = nullptr;
+
+			OpState(NextReceiver next_receiver, Pool* pool)
+				: Receiver{next_receiver}
+				, pool{pool}
+			{}
+
+			template<class... Cont>
+			void start(Cont&... cont){
+				if(pool->try_schedule(*this)){
+					return ex::start(cont...); 
 				}
+
+				return ex::set_value.operator()<NextReceiver, Cont...>(this->get_receiver(), cont...);
 			}
 
-			//if(worker_id == 0){
-			//	continue;
-			//}
-		
-			//backoff.backoff();
-		
-		}		
-	}
+			void resume(){
+				return ex::set_value.operator()<NextReceiver>(this->get_receiver());
+			}
+			
+		};
 
-public:
-	bool try_schedule(OpHandle task){
-		//thread does not belong to this pool
-		if(parent_threadpool != this){
-			return common_queue.try_enqueue(task);
+		struct Sender {
+			using SenderOptIn = ex::SenderOptIn;
+			using value_t = std::tuple<>;
+			using error_t = std::tuple<>;
+
+			Pool* pool = nullptr;
+			
+			template<class NextReceiver>
+			auto connect(NextReceiver next_receiver){
+				return OpState<NextReceiver>{next_receiver, pool};
+			}
+		};
+		
+		Pool pool = {};
+		
+		using sender_t = Sender;
+		
+		auto sender(){
+			return Sender{&pool};
 		}
-
-		//enqueue task into threads own queue
-		return local_queues.at(worker_id).try_local_push(task);
-	}
+		
+		
+	};
 	
-};
-
-
-template<>
-struct Threadpool<0> {
+	template<>
+	struct Threadpool<0> {
 	
-	bool try_schedule(auto&&...){
-		return false;
-	}	
-};
+		using sender_t = decltype(ex::value());
 
-#endif
+		auto sender(){
+			return ex::value();
+		}
+	};
+	
+}
+
+
+
+
+#endif//THREADPOOL_H

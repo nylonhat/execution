@@ -9,11 +9,11 @@ namespace ex::algorithms::bind {
 	template<Channel channel, IsReceiver SuffixReceiver, IsSender Sender1, class MonadicFunction>
 	struct OpState 
 		: InlinedReceiver<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, SuffixReceiver>
-		, ManualChildOp<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, 0, Sender1, apply_values_t<MonadicFunction, Sender1>>
+		, ManualChildOp<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, 0, Sender1, apply_channel_t<channel, MonadicFunction, Sender1>>
 	{
 
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Sender2 = apply_values_t<MonadicFunction, Sender1>;
+		using Sender2 = apply_channel_t<channel, MonadicFunction, Sender1>;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using ChildOps = ManualChildOp<OpState, 0, Sender1, Sender2>;
 
