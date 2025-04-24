@@ -4,12 +4,16 @@
 #include <functional>
 #include <memory>
 
+#include "sender.hpp"
+
+namespace ex {
 
 template<typename S>
 concept IsScheduler = requires(S scheduler){
-    //{scheduler.try_schedule(op_handle)} -> std::same_as<bool>;
-	scheduler;
+    {scheduler.sender()} -> IsSender<>;
 };
+
+
 
 template<IsScheduler S>
 struct SchedulerHandle {
@@ -30,5 +34,6 @@ struct SchedulerHandle {
 	}
 };
 
+}
 
 #endif

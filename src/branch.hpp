@@ -146,7 +146,6 @@ namespace ex::algorithms::branch_all {
 		template<IsReceiver SuffixReceiver>
 		auto connect(SuffixReceiver suffix_receiver){
 			auto lambda = [&](auto... child_senders){
-				// return OpState{scheduler, suffix_receiver, child_senders...};
 				return OpState{suffix_receiver, scheduler, child_senders...};
 			};
 
