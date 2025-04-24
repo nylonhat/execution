@@ -66,7 +66,7 @@ namespace ex::algorithms::branch_all {
 		//Scheduler Callback
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
 			requires same_index<ChildIndex, size>
-        auto set_value(Cont&... cont){
+		auto set_value(Cont&... cont){
 			auto& child_sender = ChildOp<VariantIndex>::get_sender();
 			auto& child_op = ChildOp<VariantIndex>::construct_from(child_sender);
 			auto& scheduler_op = SchedulerOp::template construct_from<VariantIndex+1>(scheduler.sender());
@@ -77,7 +77,7 @@ namespace ex::algorithms::branch_all {
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
 			requires same_index<ChildIndex, size>
 			&& same_index<VariantIndex, size - 1> //last loop
-        auto set_value(Cont&... cont){
+		auto set_value(Cont&... cont){
 			auto& child_sender = ChildOp<VariantIndex>::get_sender();
 			auto& child_op = ChildOp<VariantIndex>::construct_from(child_sender);
 			ex::start(cont..., child_op);
@@ -90,7 +90,7 @@ namespace ex::algorithms::branch_all {
 			&& not_same_index<ChildIndex, size - 1> //not last loop
 			&& not_empty_pack<Cont...>
 			&& (first_same_as<typename SchedulerOp::template VariantOp<ChildIndex+1>, Cont...> || first_same_as<typename ChildOp<ChildIndex+1>::ChildOp, Cont...>) //next loop was not scheduled
-        auto set_value(Cont&... cont, Args... args){
+		auto set_value(Cont&... cont, Args... args){
         	ChildOp<ChildIndex>::construct_result(args...[0]);
 	        counter.fetch_sub(1);
 			return ex::start(cont...);
@@ -99,7 +99,7 @@ namespace ex::algorithms::branch_all {
 		//Child Result Callback
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
 			requires not_same_index<ChildIndex, size>
-        auto set_value(Cont&... cont, Args... args){
+		auto set_value(Cont&... cont, Args... args){
         	
         	ChildOp<ChildIndex>::construct_result(args...[0]);
 	        auto old = counter.fetch_sub(1);
