@@ -151,7 +151,7 @@ namespace ex::algorithms::fold {
 			auto old_sema = semaphore.fetch_add(1);
 			
 			if constexpr(!not_finished<SchedulerOp, ArrayOp, Cont...>){
-				//Wake up
+				//Wake up producer
 				if(old_sema == -1){
 					return produce(cont...);
 				}
