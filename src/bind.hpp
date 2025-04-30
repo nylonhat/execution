@@ -36,7 +36,7 @@ namespace ex::algorithms::bind {
 				auto& child_op2 = ChildOps::template construct_from<1>(monadic_function(args...));
 				return ex::start(child_op2, cont...);
 			} else if (channel == Channel::error){
-				return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);			
+				return ex::set_value<Cont...>(this->get_receiver(), cont..., args...);			
 			}
         }
 
@@ -44,7 +44,7 @@ namespace ex::algorithms::bind {
 			requires (VariantIndex == 0)
         auto set_error(Cont&... cont, Arg... args){
 			if constexpr(channel == Channel::value){
-				return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);			
+				return ex::set_error<Cont...>(this->get_receiver(), cont..., args...);			
 			} else if (channel == Channel::error){
 				auto& child_op2 = ChildOps::template construct_from<1>(monadic_function(args...));
 				return ex::start(child_op2, cont...);
@@ -54,13 +54,13 @@ namespace ex::algorithms::bind {
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
 			requires (VariantIndex == 1)
         auto set_value(Cont&... cont, Arg... args){
-			return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);			
+			return ex::set_value<Cont...>(this->get_receiver(), cont..., args...);			
         }
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
 			requires (VariantIndex == 1)
         auto set_error(Cont&... cont, Arg... args){
-			return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);			
+			return ex::set_error<Cont...>(this->get_receiver(), cont..., args...);			
         }
 		
 	};

@@ -105,7 +105,7 @@ namespace ex::algorithms::branch_all {
 	        auto old = counter.fetch_sub(1);
 
 			if(old == 0){
-				return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., ChildOp<I>::get_result()...);
+				return ex::set_value<Cont...>(this->get_receiver(), cont..., ChildOp<I>::get_result()...);
 			}
 
 			return ex::start(cont...);

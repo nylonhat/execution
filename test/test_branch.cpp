@@ -49,6 +49,7 @@ namespace {
             a.fetch_sub(1);
             a.fetch_sub(1);
             a.fetch_sub(1);
+			a.fetch_sub(1);
             return (... + v);
         }
     };
@@ -95,6 +96,23 @@ namespace {
 
     	CHECK((result/iterations) <= (control/iterations));
     }
+	
+	TEST_CASE("branch multiple times"){
+    	ex::Threadpool<4> scheduler{};
+	
+    	auto result = ex::value(4)
+    		| ex::branch(scheduler, ex::value(1))
+			| ex::branch(scheduler, ex::value(42)) 
+			| ex::branch(scheduler, ex::value(69)) 
+			| ex::branch(scheduler, ex::value(111)) 
+    		| ex::map_value(add)
+    		| ex::sync_wait;
+			
+		auto control = 4+1+42+69+111;
+
+    	CHECK(result == control);
+    }
+	
 
 	TEST_CASE("Schedule Sender"){
 		
@@ -148,11 +166,6 @@ namespace {
 		CHECK(result == 5);
 	}
 
-	TEST_CASE("Branch 2 test"){
-
-		
-    
-    }
 
 }//namespace
 

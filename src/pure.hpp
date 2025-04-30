@@ -30,9 +30,9 @@ namespace ex::algorithms::pure {
         template<class... Cont>
         constexpr void start(Cont&... cont){
             if constexpr(channel == Channel::value){
-                return ex::set_value.operator()<NextReceiver, Cont...>(this->get_receiver(), cont..., Leaf<I, Values>::member...);
+                return ex::set_value<Cont...>(this->get_receiver(), cont..., Leaf<I, Values>::member...);
             } else if(channel == Channel::error){
-                return ex::set_error.operator()<NextReceiver, Cont...>(this->get_receiver(), cont..., Leaf<I, Values>::member...);
+                return ex::set_error<Cont...>(this->get_receiver(), cont..., Leaf<I, Values>::member...);
             }
         }
     };

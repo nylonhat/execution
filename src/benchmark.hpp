@@ -31,13 +31,13 @@ namespace ex::algorithms::benchmark {
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
         auto set_value(Cont&... cont, auto...){
 			timer.stop();
-			return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., timer.count());
+			return ex::set_value<Cont...>(this->get_receiver(), cont..., timer.count());
         }
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
         auto set_error(Cont&... cont, auto...){
 			timer.stop();
-			return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., timer.count());
+			return ex::set_error<Cont...>(this->get_receiver(), cont..., timer.count());
         }
 
 	};

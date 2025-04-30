@@ -33,10 +33,10 @@ namespace ex::algorithms::channel_else {
         auto set_value(Cont&... cont, Arg... arg){
         	if constexpr(channel == Channel::value){
 	        	if(!std::invoke(predicate, arg...)){
-	        		return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+	        		return ex::set_error<Cont...>(this->get_receiver(), cont..., arg...);
 	        	}
         	}
-    		return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+    		return ex::set_value<Cont...>(this->get_receiver(), cont..., arg...);
         }
 
         
@@ -44,10 +44,10 @@ namespace ex::algorithms::channel_else {
         auto set_error(Cont&... cont, Arg... arg){
         	if constexpr(channel == Channel::error){
 	        	if(!std::invoke(predicate, arg...)){
-	        		return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+	        		return ex::set_value<Cont...>(this->get_receiver(), cont..., arg...);
 	        	}
         	}
-    		return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., arg...);
+    		return ex::set_error<Cont...>(this->get_receiver(), cont..., arg...);
         }
 		
 	};     

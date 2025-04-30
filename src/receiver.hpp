@@ -29,20 +29,20 @@ namespace ex::concepts::set_value_cpo {
     template<class T>
     concept HasAll = HasMember<T> && HasFree<T>;
  
-    
+    template<class... Cont>
     struct FunctionObject {
-        template<HasMember Recvr, class... Cont>
+        template<HasMember Recvr>
         constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return recvr.template set_value<Cont...>(cont..., args...);
         }
 
-        template<HasFree Recvr, class... Cont>
+        template<HasFree Recvr>
         constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return set_value<Recvr, Cont...>(recvr, cont..., args...);
         }
 
         
-        template<HasAll Recvr, class... Cont>
+        template<HasAll Recvr>
         constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return recvr.template set_value<Cont...>(cont..., args...);
         }
@@ -69,21 +69,21 @@ namespace ex::concepts::set_error_cpo {
     template<class T>
     concept HasAll = HasMember<T> && HasFree<T>;
  
-    
+    template<class... Cont>
     struct FunctionObject {
 
-        template<HasMember Recvr, class... Cont>
+        template<HasMember Recvr>
         constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return recvr.template set_error<Cont...>(cont..., args...);
         }
 
-        template<HasFree Recvr, class... Cont>
+        template<HasFree Recvr>
         constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return set_error<Recvr, Cont...>(recvr, cont..., args...);
         }
 
         
-        template<HasAll Recvr, class... Cont>
+        template<HasAll Recvr>
         constexpr static auto operator()(Recvr recvr, Cont&...cont, auto... args) {
             return recvr.template set_error<Cont...>(cont..., args...);
         }
@@ -94,9 +94,11 @@ namespace ex::concepts::set_error_cpo {
 
 
 namespace ex {
-
-    inline constexpr auto set_value = concepts::set_value_cpo::FunctionObject{};
-    inline constexpr auto set_error = concepts::set_error_cpo::FunctionObject{};
+	template<class... Cont>
+    inline constexpr auto set_value = concepts::set_value_cpo::FunctionObject<Cont...>{};
+    
+	template<class... Cont>
+	inline constexpr auto set_error = concepts::set_error_cpo::FunctionObject<Cont...>{};
     
 }//namespace ex
 

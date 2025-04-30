@@ -41,7 +41,7 @@ namespace ex::algorithms::repeat_while {
 	        	}
         	}
 
-			return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);
+			return ex::set_value<Cont...>(this->get_receiver(), cont..., args...);
         }
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
@@ -54,7 +54,7 @@ namespace ex::algorithms::repeat_while {
 	        	}
         	}
         	
-			return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);
+			return ex::set_error<Cont...>(this->get_receiver(), cont..., args...);
         }
 	};
 

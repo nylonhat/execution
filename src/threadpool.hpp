@@ -58,11 +58,11 @@ namespace ex {
 					return ex::start(cont...); 
 				}
 
-				return ex::set_value.operator()<NextReceiver, Cont...>(this->get_receiver(), cont...);
+				return ex::set_value<Cont...>(this->get_receiver(), cont...);
 			}
 
 			void resume(){
-				return ex::set_value.operator()<NextReceiver>(this->get_receiver());
+				return ex::set_value<>(this->get_receiver());
 			}
 			
 		};

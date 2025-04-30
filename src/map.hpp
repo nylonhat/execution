@@ -32,18 +32,18 @@ namespace ex::algorithms::map {
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         auto set_value(Cont&... cont, Arg... args){
 			if constexpr(channel == Channel::value){
-				return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., function(args...));
+				return ex::set_value<Cont...>(this->get_receiver(), cont..., function(args...));
 			} else if (channel == Channel::error){
-				return ex::set_value.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);
+				return ex::set_value<Cont...>(this->get_receiver(), cont..., args...);
 			}
         }
 
         template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         auto set_error(Cont&... cont, Arg... args){
 			if constexpr(channel == Channel::value){
-				return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., args...);
+				return ex::set_error<Cont...>(this->get_receiver(), cont..., args...);
 			} else if (channel == Channel::error){
-				return ex::set_error.operator()<SuffixReceiver, Cont...>(this->get_receiver(), cont..., function(args...));
+				return ex::set_error<Cont...>(this->get_receiver(), cont..., function(args...));
 			}
         }		
 	};       
