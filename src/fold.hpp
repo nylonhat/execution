@@ -35,16 +35,18 @@ namespace ex::algorithms::fold {
 	struct OpState
 		: InlinedReceiver<OpState<Size, SuffixReceiver, Scheduler, SenderRange, Init, Function>, SuffixReceiver>
 		, ManualChildOp<OpState<Size, SuffixReceiver, Scheduler, SenderRange, Init, Function>, 0, typename Scheduler::sender_t>
-		, FoldChildOp<Size, OpState<Size, SuffixReceiver, Scheduler, SenderRange, Init, Function>, 1, std::ranges::range_value_t<SenderRange>>
+		, ManualChildOp<OpState<Size, SuffixReceiver, Scheduler, SenderRange, Init, Function>, 1, std::ranges::range_value_t<SenderRange>>
+		, FoldChildOp<Size, OpState<Size, SuffixReceiver, Scheduler, SenderRange, Init, Function>, 2, ex::single_value_t<std::ranges::range_value_t<SenderRange>>>
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using SchedulerSender = Scheduler::sender_t;
 		using SchedulerOp = ManualChildOp<OpState, 0, SchedulerSender>;
-		using ChildSender = std::ranges::range_value_t<SenderRange>;
-		
-		using ArrayOp = FoldChildOp<Size, OpState, 1, ChildSender>;
+		using LoopSender = std::ranges::range_value_t<SenderRange>;
+		using LoopOp = ManualChildOp<OpState, 1, LoopSender>;
+		using ChildSender = ex::single_value_t<LoopSender>;
+		using ArrayOp = FoldChildOp<Size, OpState, 2, ChildSender>;
 		
 		Scheduler scheduler;
 		SenderRange sender_range;
@@ -75,9 +77,7 @@ namespace ex::algorithms::fold {
 			, iter{sender_range.begin()}
 			, sentinel{sender_range.end()}
 		{
-			for (std::size_t i = 0; i < Size; i++){
-				ticket_ring.at(i).ticket = i;
-			}
+			std::ranges::iota(std::views::transform(ticket_ring, &TicketCell::ticket), 0); 	
 		}
 
 		template<class... Cont>
@@ -112,9 +112,16 @@ namespace ex::algorithms::fold {
 			return produce(cont...);
 		}
 		
-		
 		template<class... Cont>
 		void produce(Cont&... cont){
+			auto& loop_op = LoopOp::template construct_from<0>(*(iter++));
+			return ex::start(loop_op, cont...);
+		}
+		
+		
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
+			requires same_index<ChildIndex, 1>
+		void set_value(Cont&... cont, ChildSender child_sender){
 			auto old_head = head++;
 			
 			while(ticket_ring.at(old_head % Size).pending.load()){
@@ -130,15 +137,15 @@ namespace ex::algorithms::fold {
 				folded_value = function(value, folded_value);
 			}
 			
-			auto& child_op = ArrayOp::construct_from_at(*(iter++), ticket);
+			auto& child_op = ArrayOp::construct_from_at(child_sender, ticket);
 			auto& scheduler_op = SchedulerOp::template construct_from<0>(scheduler.sender());
 			return ex::start(cont..., scheduler_op, child_op);
-			
 		}
+		
 
 		//Child Result Callback
 		template<std::size_t ChildIndex, class... Cont, class Arg>
-			requires same_index<ChildIndex, 1>
+			requires same_index<ChildIndex, 2>
 		void set_value(std::size_t ticket, Cont&... cont, Arg arg){
 			ArrayOp::construct_result_at(arg, ticket);
 			

@@ -29,9 +29,11 @@ namespace {
 		std::size_t min = 0;
 		std::size_t max = 1000000;
 		
+		
+		//range of senders that send child sender
 		auto sender_range = std::views::iota(min, max)
 			| std::views::transform([](auto i){
-				return ex::value(i);
+				return ex::value(i) | ex::map_value(ex::value);
 			});
 			
 		auto result = ex::fold_on<2>(pool, sender_range, min, add)
