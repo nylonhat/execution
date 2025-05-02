@@ -34,21 +34,18 @@ namespace ex::concepts::start_cpo {
 
         template<IsOpState Op, IsOpState... Cont>
         requires HasMember<Op, Cont...>
-        // [[clang::always_inline]]
         constexpr static auto operator()(Op& op, Cont&...cont){
             return op.start(cont...);
         }
 
         template<IsOpState Op, IsOpState... Cont>
         requires HasFree<Op, Cont...>
-        // [[clang::always_inline]]
         constexpr static auto operator()(Op& op, Cont&...cont){
             return start(op, cont...);
         }
 
         template<IsOpState Op, IsOpState... Cont>
         requires HasAll<Op, Cont...>
-        // [[clang::always_inline]]
         constexpr static auto operator()(Op& op, Cont&...cont){
             return op.start(cont...);
         }

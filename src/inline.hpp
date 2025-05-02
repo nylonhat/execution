@@ -89,6 +89,11 @@ namespace ex {
             auto set_error(Cont&... cont, Arg... arg){
                 return parent_op->template set_error<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
             }
+			
+			template<class... Cont>
+            auto set_stop(Cont&... cont){
+				return parent_op->template set_stop<ChildIndex, VariantIndex, Cont...>(cont...);
+			}
               
         };
 
