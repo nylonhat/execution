@@ -3,22 +3,12 @@
 
 #include <atomic>
 #include "scheduler.hpp"
-#include "manual_branch_child.hpp"
+#include "branch_child.hpp"
 #include "concepts.hpp"
-#include "inline.hpp"
+#include "inlined_receiver.hpp"
+#include "variant_child.hpp"
 
 namespace ex::algorithms::branch_all {
-	template<size_t A, size_t B>
-	concept same_index = (A == B);
-
-	template<size_t A, size_t B>
-	concept not_same_index = (A != B);
-
-	template<class... Pack>
-	concept not_empty_pack = sizeof...(Pack) != 0;
-
-	template<class T, class... Pack>
-	concept first_same_as = std::same_as<Pack...[0], T>;
 
 	template<class...>
 	struct OpStateBase;
@@ -26,24 +16,24 @@ namespace ex::algorithms::branch_all {
 	template<IsReceiver SuffixReceiver, IsScheduler Scheduler, IsSender... Senders, std::size_t... I>
 	struct OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>
 		: InlinedReceiver<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, SuffixReceiver>
-		, ManualChildOp<
+		, VariantChildOp<
 			OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, 
 			sizeof...(Senders), 
 			std::conditional_t<true, typename Scheduler::sender_t, decltype(I)>...
 		  >
-		, ManualBranchChildOp<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, I, Senders>...
+		, BranchChildOp<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, I, Senders>...
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpStateBase, SuffixReceiver>;
 		using SchedulerSender = Scheduler::sender_t;
-		using SchedulerOp = ManualChildOp<
+		using SchedulerOp = VariantChildOp<
 			OpStateBase, 
 			sizeof...(Senders), 
 			std::conditional_t<true, SchedulerSender, decltype(I)>...
 		>;
 		
-		template<std::size_t ChildIndex> using ChildOp = ManualBranchChildOp<OpStateBase, ChildIndex, Senders...[ChildIndex]>;
+		template<std::size_t ChildIndex> using ChildOp = BranchChildOp<OpStateBase, ChildIndex, Senders...[ChildIndex]>;
 
 		static constexpr std::size_t size = sizeof...(Senders);
 		
@@ -69,29 +59,22 @@ namespace ex::algorithms::branch_all {
 		auto set_value(Cont&... cont){
 			auto& child_sender = ChildOp<VariantIndex>::get_sender();
 			auto& child_op = ChildOp<VariantIndex>::construct_from(child_sender);
-			auto& scheduler_op = SchedulerOp::template construct_from<VariantIndex+1>(scheduler.sender());
-			ex::start(cont..., scheduler_op, child_op);
+			
+			if constexpr(!same_index<VariantIndex, size - 1>){
+				auto& scheduler_op = SchedulerOp::template construct_from<VariantIndex+1>(scheduler.sender());
+				return ex::start(cont..., scheduler_op, child_op);
+			} else {
+				return ex::start(cont..., child_op);
+			}
 		}
 		
-		//Scheduler Callback Last Loop
-		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
-			requires same_index<ChildIndex, size>
-			&& same_index<VariantIndex, size - 1> //last loop
-		auto set_value(Cont&... cont){
-			auto& child_sender = ChildOp<VariantIndex>::get_sender();
-			auto& child_op = ChildOp<VariantIndex>::construct_from(child_sender);
-			ex::start(cont..., child_op);
-		}
 
-		
 		//Child Result Callback (No schedule)
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
 			requires not_same_index<ChildIndex, size> 
-			&& not_same_index<ChildIndex, size - 1> //not last loop
-			&& not_empty_pack<Cont...>
-			&& (first_same_as<typename SchedulerOp::template VariantOp<ChildIndex+1>, Cont...> || first_same_as<typename ChildOp<ChildIndex+1>::ChildOp, Cont...>) //next loop was not scheduled
+			&& first_same_as<typename ChildOp<ChildIndex+1>::ChildOp, Cont...>
 		auto set_value(Cont&... cont, Args... args){
-        	ChildOp<ChildIndex>::construct_result(args...[0]);
+        	ChildOp<ChildIndex>::construct_result(args...);
 	        counter.fetch_sub(1);
 			return ex::start(cont...);
         }
@@ -101,9 +84,9 @@ namespace ex::algorithms::branch_all {
 			requires not_same_index<ChildIndex, size>
 		auto set_value(Cont&... cont, Args... args){
         	
-        	ChildOp<ChildIndex>::construct_result(args...[0]);
+        	ChildOp<ChildIndex>::construct_result(args...);
 	        auto old = counter.fetch_sub(1);
-
+			
 			if(old == 0){
 				return ex::set_value<Cont...>(this->get_receiver(), cont..., ChildOp<I>::get_result()...);
 			}

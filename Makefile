@@ -1,6 +1,6 @@
 CXX := clang++
 CEXT := cpp
-CXXFLAGS := -O3 -g -Wall -std=c++26 #-fsanitize=thread  #-fsanitize=undefined  #-flto -DNDEBUG  #-fsanitize=address #-ftemplate-depth=10000 #-fsanitize=thread
+CXXFLAGS := -O3 -g -Wall -std=c++26 -fno-rtti -fno-exceptions -flto #-ftemplate-depth=10000 #-DNDEBUG #-fsanitize=thread #-fsanitize=address #-fsanitize=undefined
 
 SRCPATH := ./src
 TESTPATH := ./test

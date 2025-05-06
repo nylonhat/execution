@@ -2,18 +2,19 @@
 #define MAP_H
 
 #include "concepts.hpp"
-#include "inline.hpp"
+#include "inlined_receiver.hpp"
+#include "variant_child.hpp"
 
 namespace ex::algorithms::map {
 	
 	template<Channel channel, class SuffixReceiver, IsSender ChildSender, class Function>
 	struct OpState
 		: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender, Function>, SuffixReceiver>
-		, ManualChildOp<OpState<channel, SuffixReceiver, ChildSender, Function>, 0, ChildSender> 
+		, VariantChildOp<OpState<channel, SuffixReceiver, ChildSender, Function>, 0, ChildSender> 
 	{ 
 		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
-		using ChildOp = ManualChildOp<OpState, 0, ChildSender>;
+		using ChildOp = VariantChildOp<OpState, 0, ChildSender>;
 		
 		[[no_unique_address]] Function function;
 		

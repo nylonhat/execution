@@ -1,40 +1,10 @@
-#ifndef INLINE_HPP
-#define INLINE_HPP
+#ifndef VARIANT_CHILD_HPP
+#define VARIANT_CHILD_HPP
 
 #include "concepts.hpp"
 #include <algorithm>
 
 namespace ex {
-
-    template<class Receiver, class ChildOp>
-    concept InlinableReceiver = requires(ChildOp* op){
-        {Receiver::make_for_child(op)} -> std::same_as<Receiver>;
-    };
-
-    
-    template<class Derived, class Receiver>
-    struct InlinedReceiver {
-        [[no_unique_address]] Receiver receiver;
-        
-        InlinedReceiver(Receiver receiver)
-            : receiver{receiver}
-        {}
-
-        Receiver& get_receiver(){
-            return receiver;
-        }
-    };
-    
-    template<class Derived, class Receiver>
-        requires InlinableReceiver<Receiver, Derived>
-    struct InlinedReceiver<Derived, Receiver> {
-        InlinedReceiver(Receiver receiver){}
-
-        Receiver get_receiver(){
-            return Receiver::make_for_child(static_cast<Derived*>(this));
-        }
-    };
-
 
     template<template<std::size_t> class Receiver, class... Senders, std::size_t... I>
     consteval auto max_op_size_impl(std::index_sequence<I...>){
@@ -46,7 +16,6 @@ namespace ex {
         return max_op_size_impl<Receiver, Senders...>(std::index_sequence_for<Senders...>{});
     }
 
-    
     template<template<std::size_t> class Receiver, class... Senders, std::size_t... I>
     consteval auto max_op_align_impl(std::index_sequence<I...>){
         return std::max({alignof(ex::connect_t<Senders, Receiver<I>>)...});
@@ -57,9 +26,8 @@ namespace ex {
         return max_op_align_impl<Receiver, Senders...>(std::index_sequence_for<Senders...>{});
     }
 
-    
     template<class ParentOp, std::size_t ChildIndex, class... ChildSenders>
-    struct ManualChildOp {
+    struct VariantChildOp {
 
         template <std::size_t VariantIndex>
         struct Receiver {
@@ -74,7 +42,7 @@ namespace ex {
             template<class ChildOp>
             static Receiver make_for_child(ChildOp* child_op){
                 auto* storage = reinterpret_cast<std::byte*>(child_op);
-                auto* self = reinterpret_cast<ManualChildOp*>(storage);
+                auto* self = reinterpret_cast<VariantChildOp*>(storage);
                 auto* parent_op = static_cast<ParentOp*>(self);
                 return Receiver{parent_op};           
             }
@@ -102,12 +70,12 @@ namespace ex {
         
         alignas(max_op_align<Receiver, ChildSenders...>()) std::array<std::byte, max_op_size<Receiver, ChildSenders...>()> storage;
     
-        ManualChildOp() = default;
-        ManualChildOp(ChildSenders...[0] sender){
+        VariantChildOp() = default;
+        VariantChildOp(ChildSenders...[0] sender){
             construct_from<0>(sender);
         }
         
-        ~ManualChildOp() = default;
+        ~VariantChildOp() = default;
         
         template<std::size_t Index>
         auto& construct_from(ChildSenders...[Index] sender){
@@ -135,4 +103,4 @@ namespace ex {
 }
 
 
-#endif//INLINE_HPP
+#endif//VARIANT_CHILD_HPP

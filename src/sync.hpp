@@ -4,15 +4,16 @@
 #include <semaphore>
 #include <print>
 #include "concepts.hpp"
+#include "variant_child.hpp"
 
 namespace ex::algorithms::sync_wait {
 
     template<class ChildSender>
     struct OpState 
-        : ManualChildOp<OpState<ChildSender>, 0, ChildSender>
+        : VariantChildOp<OpState<ChildSender>, 0, ChildSender>
     {
 		using OpStateOptIn = ex::OpStateOptIn;
-        using ChildOp = ManualChildOp<OpState, 0, ChildSender>;
+        using ChildOp = VariantChildOp<OpState, 0, ChildSender>;
         using Result = single_value_t<ChildSender>;
 
         Result* result;

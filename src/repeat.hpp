@@ -2,19 +2,20 @@
 #define REPEAT_H
 
 #include "concepts.hpp"
-#include "inline.hpp"
+#include "inlined_receiver.hpp"
+#include "variant_child.hpp"
 
 namespace ex::algorithms::repeat_while {
 
 	template<Channel channel, IsReceiver SuffixReceiver, IsSender ChildSender1, class Predicate, class MonadicFunction>
 	struct OpState 
 		: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, SuffixReceiver>
-		, ManualChildOp<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>
+		, VariantChildOp<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>
 	{
 
 		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
-		using ChildOps = ManualChildOp<OpState, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>; 
+		using ChildOps = VariantChildOp<OpState, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>; 
 
 		[[no_unique_address]] Predicate predicate;
 		[[no_unique_address]] MonadicFunction monadic_function;

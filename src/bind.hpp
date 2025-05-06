@@ -2,20 +2,21 @@
 #define BIND_H
 
 #include "concepts.hpp"
-#include "inline.hpp"
+#include "inlined_receiver.hpp"
+#include "variant_child.hpp"
 
 namespace ex::algorithms::bind {
 		
 	template<Channel channel, IsReceiver SuffixReceiver, IsSender Sender1, class MonadicFunction>
 	struct OpState 
 		: InlinedReceiver<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, SuffixReceiver>
-		, ManualChildOp<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, 0, Sender1, apply_channel_t<channel, MonadicFunction, Sender1>>
+		, VariantChildOp<OpState<channel, SuffixReceiver, Sender1, MonadicFunction>, 0, Sender1, apply_channel_t<channel, MonadicFunction, Sender1>>
 	{
 
 		using OpStateOptIn = ex::OpStateOptIn;
 		using Sender2 = apply_channel_t<channel, MonadicFunction, Sender1>;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
-		using ChildOps = ManualChildOp<OpState, 0, Sender1, Sender2>;
+		using ChildOps = VariantChildOp<OpState, 0, Sender1, Sender2>;
 
 		[[no_unique_address]] MonadicFunction monadic_function;
 		

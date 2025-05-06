@@ -1,12 +1,12 @@
-#ifndef MANUAL_BRANCH_CHILD_H
-#define MANUAL_BRANCH_CHILD_H
+#ifndef BRANCH_CHILD_H
+#define BRANCH_CHILD_H
 
 #include "concepts.hpp"
 
 namespace ex::algorithms::branch_all {
     
     template<class ParentOp, std::size_t ChildIndex, IsSingleValueSender ChildSender>
-    struct ManualBranchChildOp {
+    struct BranchChildOp {
 
         template <std::size_t VariantIndex>
         struct Receiver {
@@ -21,7 +21,7 @@ namespace ex::algorithms::branch_all {
             template<class ChildOp>
             static Receiver make_for_child(ChildOp* child_op){
                 auto* storage = reinterpret_cast<std::byte*>(child_op);
-                auto* self = reinterpret_cast<ManualBranchChildOp*>(storage);
+                auto* self = reinterpret_cast<BranchChildOp*>(storage);
                 auto* parent_op = static_cast<ParentOp*>(self);
                 return Receiver{parent_op};           
             }
@@ -46,12 +46,12 @@ namespace ex::algorithms::branch_all {
     
         alignas(Sender) alignas(ChildOp) alignas(Result) std::array<std::byte, std::max({sizeof(Sender), sizeof(ChildOp), sizeof(Result)})> storage;
         
-        ManualBranchChildOp() = default;
-        ManualBranchChildOp(ChildSender child_sender){
+        BranchChildOp() = default;
+        BranchChildOp(ChildSender child_sender){
             ::new (&storage) Sender (child_sender);
         }
     
-        ~ManualBranchChildOp() = default;
+        ~BranchChildOp() = default;
     
         auto& construct_from(ChildSender child_sender){
             auto* parent_op = static_cast<ParentOp*>(this);
@@ -83,4 +83,4 @@ namespace ex::algorithms::branch_all {
 
 }//namespace ex::algorithms::branch
 
-#endif//MANUAL_BRANCH_CHILD_HPP
+#endif//BRANCH_CHILD_HPP

@@ -3,19 +3,20 @@
 
 #include "timer.hpp"
 #include "concepts.hpp"
-#include "inline.hpp"
+#include "inlined_receiver.hpp"
+#include "variant_child.hpp"
 
 namespace ex::algorithms::benchmark {
 	
 	template<IsReceiver SuffixReceiver, IsSender ChildSender>
 	struct OpState
 		: InlinedReceiver<OpState<SuffixReceiver, ChildSender>, SuffixReceiver>
-		, ManualChildOp<OpState<SuffixReceiver, ChildSender>, 0, ChildSender>
+		, VariantChildOp<OpState<SuffixReceiver, ChildSender>, 0, ChildSender>
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
-		using ChildOp =  ManualChildOp<OpState, 0, ChildSender>;
+		using ChildOp =  VariantChildOp<OpState, 0, ChildSender>;
 		Timer timer = {};
 	
 		OpState(SuffixReceiver suffix_receiver, ChildSender child_sender)

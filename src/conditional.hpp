@@ -2,19 +2,20 @@
 #define CONDITIONAL_HPP
 
 #include "concepts.hpp"
-#include "inline.hpp"
+#include "inlined_receiver.hpp"
+#include "variant_child.hpp"
 
 namespace ex::algorithms::channel_else {
 
 	template<Channel channel, class SuffixReceiver, class Predicate, class ChildSender>
 	struct OpState 
 		: InlinedReceiver<OpState<channel, SuffixReceiver, Predicate, ChildSender>, SuffixReceiver>
-		, ManualChildOp<OpState<channel, SuffixReceiver, Predicate, ChildSender>, 0, ChildSender>
+		, VariantChildOp<OpState<channel, SuffixReceiver, Predicate, ChildSender>, 0, ChildSender>
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
-		using ChildOp =  ManualChildOp<OpState, 0, ChildSender>;
+		using ChildOp =  VariantChildOp<OpState, 0, ChildSender>;
 
 		Predicate predicate;
 

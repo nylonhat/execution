@@ -2,7 +2,7 @@
 #define PURE_H
 
 #include "concepts.hpp"
-#include "inline.hpp"
+#include "inlined_receiver.hpp"
 
 namespace ex::algorithms::pure {
     

@@ -3,7 +3,7 @@
 
 #include "scheduler.hpp"
 #include "concepts.hpp"
-#include "inline.hpp"
+#include "inlined_receiver.hpp"
 #include "pure.hpp"
 
 #include "bounded_threadpool.hpp"

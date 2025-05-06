@@ -54,6 +54,7 @@ namespace {
         }
     };
     
+	
     TEST_CASE("Benchmark: branch with inline scheduler"){
 
     	ex::Threadpool<0> scheduler{};
@@ -112,6 +113,7 @@ namespace {
 
     	CHECK(result == control);
     }
+	
 	
 
 	TEST_CASE("Schedule Sender"){
