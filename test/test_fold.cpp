@@ -29,14 +29,10 @@ namespace {
 		std::size_t min = 0;
 		std::size_t max = 1000000;
 		
-		
-		//range of senders that send child sender
 		auto sender_range = std::views::iota(min, max)
-			| std::views::transform([](auto i){
-				return ex::value(i) | ex::map_value(ex::value);
-			});
+			| std::views::transform(ex::value);
 			
-		auto result = ex::fold_on<2>(pool, sender_range, min, add)
+		auto result = ex::fold_on<2>(pool, sender_range, ex::value, min, add)
 			| ex::sync_wait;
 		
 		auto control = std::ranges::fold_left(std::views::iota(min, max), min, add);
@@ -56,14 +52,10 @@ namespace {
 		std::size_t min = 0;
 		std::size_t max = 1000000;
 		
-		
-		//range of senders that send child sender
 		auto sender_range = std::views::iota(min, max)
-			| std::views::transform([](auto i){
-				return ex::value(i) | ex::map_value(ex::value);
-			});
+			| std::views::transform(ex::value);
 			
-		auto result = ex::fold_on<2>(pool, sender_range, min, add)
+		auto result = ex::fold_on<2>(pool, sender_range, ex::value, min, add)
 			| ex::sync_wait;
 		
 		auto control = std::ranges::fold_left(std::views::iota(min, max), min, add);
@@ -71,6 +63,42 @@ namespace {
 		CHECK(result == control);
     
     }
+
+	TEST_CASE("Chunk accumulate"){
+		
+		ex::Threadpool<16> pool = {};
+		
+		auto add = [](auto a, auto b){
+			return a + b;
+		};
+		
+		std::size_t min = 0;
+		std::size_t max = 1000000;
+		
+		//Range of Senders of chunks views
+		auto sender_range = std::views::iota(min, max)
+		    | std::views::chunk(max/16)
+			| std::views::transform(ex::value);
+
+		//Synchronous folding
+		auto fold_chunk = [=](auto chunk_view){
+			return std::ranges::fold_left(chunk_view, min, add);
+		};
+
+		//Async folding on each chunk
+		auto async_fold_chunk = [=](auto chunk_view){
+			return ex::value(chunk_view) 
+			     | ex::map_value(fold_chunk);
+		};
+			
+		auto result = ex::fold_on<16>(pool, sender_range, async_fold_chunk, min, add)
+			| ex::sync_wait;
+		
+		auto control = std::ranges::fold_left(std::views::iota(min, max), min, add);
+		
+		CHECK(result == control);
+    
+    }    
 
 }//namespace
 

@@ -14,12 +14,12 @@ namespace ex::algorithms::fold {
 	
 	struct ChildTag{};
 
-	template<std::size_t Size, IsReceiver SuffixReceiver, IsScheduler Scheduler, std::ranges::range SenderRange, class Init, class Function>
+	template<std::size_t Size, IsReceiver SuffixReceiver, IsScheduler Scheduler, std::ranges::range SenderRange, class MonadicFunction, class Init, class Function>
 		requires (Size > 1)
 	struct OpState
-		: InlinedReceiver<OpState<Size, SuffixReceiver, Scheduler, SenderRange, Init, Function>, SuffixReceiver>
-		, VariantChildOp<OpState<Size, SuffixReceiver, Scheduler, SenderRange, Init, Function>, 0, typename Scheduler::sender_t, std::ranges::range_value_t<SenderRange>>
-		, FoldChildOp<Size, OpState<Size, SuffixReceiver, Scheduler, SenderRange, Init, Function>, ChildTag{}, ex::single_value_t<std::ranges::range_value_t<SenderRange>>>
+		: InlinedReceiver<OpState<Size, SuffixReceiver, Scheduler, SenderRange, MonadicFunction, Init, Function>, SuffixReceiver>
+		, VariantChildOp<OpState<Size, SuffixReceiver, Scheduler, SenderRange, MonadicFunction, Init, Function>, 0, typename Scheduler::sender_t, std::ranges::range_value_t<SenderRange>>
+		, FoldChildOp<Size, OpState<Size, SuffixReceiver, Scheduler, SenderRange, MonadicFunction, Init, Function>, ChildTag{}, ex::apply_values_t<MonadicFunction, std::ranges::range_value_t<SenderRange>>>
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
@@ -27,11 +27,12 @@ namespace ex::algorithms::fold {
 		using SchedulerSender = Scheduler::sender_t;
 		using RangeSender = std::ranges::range_value_t<SenderRange>;
 		using LoopOp = VariantChildOp<OpState, 0, SchedulerSender, RangeSender>;
-		using ChildSender = ex::single_value_t<RangeSender>;
+		using ChildSender = ex::apply_values_t<MonadicFunction, RangeSender>;
 		using ChildOps = FoldChildOp<Size, OpState, ChildTag{}, ChildSender>;
 		
 		Scheduler scheduler;
 		SenderRange sender_range;
+		MonadicFunction monadic_function;
 		Init folded_value;
 		Function function;
 		
@@ -48,12 +49,13 @@ namespace ex::algorithms::fold {
 		
 		std::array<TicketCell, Size> ticket_ring;
 		
-		OpState(SuffixReceiver suffix_receiver, Scheduler scheduler, SenderRange sender_range, Init init, Function function)
+		OpState(SuffixReceiver suffix_receiver, Scheduler scheduler, SenderRange sender_range, MonadicFunction monadic_function, Init init, Function function)
 			: Receiver{suffix_receiver}
 			, LoopOp{scheduler.sender()}
 			, ChildOps{}
 			, scheduler{scheduler}
 			, sender_range{sender_range}
+			, monadic_function{monadic_function}
 			, folded_value{init}
 			, function{function}
 			, iter{sender_range.begin()}
@@ -112,9 +114,9 @@ namespace ex::algorithms::fold {
 		
 		
 		//Range sender callback
-		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
 			requires same_index<ChildIndex, 0> && same_index<VariantIndex, 1>
-		void set_value(Cont&... cont, ChildSender child_sender){
+		void set_value(Cont&... cont, Args... args){
 			auto old_head = head++;
 			
 			auto ticket = ticket_ring.at(old_head % Size).ticket;
@@ -124,7 +126,7 @@ namespace ex::algorithms::fold {
 				folded_value = function(value, folded_value);
 			}
 			
-			auto& child_op = ChildOps::construct_from_sender_at(child_sender, ticket);
+			auto& child_op = ChildOps::construct_from_sender_at(monadic_function(args...), ticket);
 			auto& scheduler_op = LoopOp::template construct_from<0>(scheduler.sender());
 			return ex::start(cont..., scheduler_op, child_op);
 		}
@@ -169,7 +171,7 @@ namespace ex::algorithms::fold {
 	};
 
 	
-	template<std::size_t Size, IsScheduler Scheduler, std::ranges::range SenderRange, class Init, class Function>
+	template<std::size_t Size, IsScheduler Scheduler, std::ranges::range SenderRange, class MonadicFunction, class Init, class Function>
 		requires (Size > 1)	
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
@@ -178,21 +180,23 @@ namespace ex::algorithms::fold {
 
 		Scheduler scheduler;
 		SenderRange sender_range;
+		MonadicFunction monadic_function;
 		Init init;
 		Function function;
 
 		Sender(const Sender&) = default;
 
-		Sender(Scheduler scheduler, SenderRange sender_range, Init init, Function function)
+		Sender(Scheduler scheduler, SenderRange sender_range, MonadicFunction monadic_function, Init init, Function function)
 			: scheduler{scheduler}
 			, sender_range{sender_range}
+			, monadic_function{monadic_function}
 			, init{init}
 			, function{function}
 		{}
 
 		template<IsReceiver SuffixReceiver>
 		auto connect(SuffixReceiver suffix_receiver){
-			return OpState<Size, SuffixReceiver, Scheduler, SenderRange, Init, Function>{suffix_receiver, scheduler, sender_range, init, function};
+			return OpState<Size, SuffixReceiver, Scheduler, SenderRange, MonadicFunction, Init, Function>{suffix_receiver, scheduler, sender_range, monadic_function, init, function};
 		}
 	};
 
@@ -200,10 +204,10 @@ namespace ex::algorithms::fold {
 		requires (Size > 1)
 	struct FunctionObject {
 		
-		template<IsScheduler Scheduler, std::ranges::range SenderRange, class Init, class Function>
-		auto operator()(this auto&&, Scheduler& scheduler, SenderRange sender_range, Init init, Function function){
+		template<IsScheduler Scheduler, std::ranges::range SenderRange, class MonadicFunction, class Init, class Function>
+		auto operator()(this auto&&, Scheduler& scheduler, SenderRange sender_range, MonadicFunction monadic_function, Init init, Function function){
 			auto handle = SchedulerHandle{scheduler};
-			return Sender<Size, SchedulerHandle<Scheduler>, SenderRange, Init, Function>{handle, sender_range, init, function};	
+			return Sender<Size, SchedulerHandle<Scheduler>, SenderRange, MonadicFunction, Init, Function>{handle, sender_range, monadic_function, init, function};	
 		}
 		
 	};
