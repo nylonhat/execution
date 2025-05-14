@@ -76,9 +76,12 @@ namespace ex {
         }
         
         ~VariantChildOp() = default;
-        
-        template<std::size_t Index>
-        auto& construct_from(ChildSenders...[Index] sender){
+
+        // gcc can't mangle packs yet
+        // template<std::size_t Index>
+        // auto& construct_from(ChildSenders...[Index] sender){
+        template<std::size_t Index, class S>
+        auto& construct_from(S sender){
             auto* parent_op = static_cast<ParentOp*>(this);
             return *::new (&storage) VariantOp<Index> (ex::connect(sender, Receiver<Index>{parent_op}));
         }

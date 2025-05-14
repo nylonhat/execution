@@ -34,6 +34,8 @@ namespace ex::algorithms::repeat_while {
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         void set_value(Cont&... cont, Arg... args){
+			static_assert(sizeof...(cont) == 0);
+        	
         	if constexpr(channel == Channel::value){
 	        	if(predicate(args...)){
 	        		auto child_sender2 = monadic_function(args...);
@@ -41,7 +43,6 @@ namespace ex::algorithms::repeat_while {
 	        		return ex::start(child_op2, cont...);
 	        	}
         	}
-
 			return ex::set_value<Cont...>(this->get_receiver(), cont..., args...);
         }
 

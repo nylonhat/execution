@@ -15,7 +15,7 @@
 #include <iostream>
 #include <ranges>
 
-namespace {
+namespace test {
 
 
 	TEST_CASE("Async accumulate with bounded concurrency"){
@@ -99,6 +99,31 @@ namespace {
 		CHECK(result == control);
     
     }    
+
+
+	TEST_CASE("Fold tail call optimisation"){
+		
+		ex::Threadpool<0> pool = {};
+		
+		auto add = [](auto a, auto b){
+			return a + b;
+		};
+		
+		std::size_t min = 0;
+		std::size_t max = 10;
+		
+		auto sender_range = std::views::iota(min, max)
+			| std::views::transform(ex::value);
+			
+		auto result = ex::fold_on<2>(pool, sender_range, ex::value, min, add)
+		    | ex::repeat_n_value(1000000)
+			| ex::sync_wait;
+		
+		auto control = std::ranges::fold_left(std::views::iota(min, max), min, add);
+		
+		CHECK(result == control);
+    
+    }
 
 }//namespace
 

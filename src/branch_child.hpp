@@ -1,6 +1,7 @@
 #ifndef BRANCH_CHILD_H
 #define BRANCH_CHILD_H
 
+#include <algorithm>
 #include "concepts.hpp"
 
 namespace ex::algorithms::branch_all {

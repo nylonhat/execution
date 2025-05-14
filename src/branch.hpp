@@ -71,8 +71,8 @@ namespace ex::algorithms::branch_all {
 
 		//Child Result Callback (No schedule)
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
-			requires not_same_index<ChildIndex, size> 
-			&& first_same_as<typename ChildOp<ChildIndex+1>::ChildOp, Cont...>
+			requires not_same_index<ChildIndex, size>
+			&& (first_same_as<typename SchedulerOp::template VariantOp<ChildIndex+2>, Cont...> || first_same_as<typename ChildOp<ChildIndex+1>::ChildOp, Cont...>)
 		auto set_value(Cont&... cont, Args... args){
         	ChildOp<ChildIndex>::construct_result(args...);
 	        counter.fetch_sub(1);
@@ -83,7 +83,6 @@ namespace ex::algorithms::branch_all {
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
 			requires not_same_index<ChildIndex, size>
 		auto set_value(Cont&... cont, Args... args){
-        	
         	ChildOp<ChildIndex>::construct_result(args...);
 	        auto old = counter.fetch_sub(1);
 			

@@ -1,6 +1,6 @@
-CXX := clang++
+CXX := g++
 CEXT := cpp
-CXXFLAGS := -O3 -g -Wall -std=c++26 -fno-rtti -fno-exceptions #-flto #-ftemplate-depth=10000 #-DNDEBUG #-fsanitize=thread #-fsanitize=address #-fsanitize=undefined
+CXXFLAGS := -O3 -g -Wall -std=c++26 -fno-rtti -fno-exceptions -flto=auto  #-ftemplate-depth=10000 #-DNDEBUG #-fsanitize=thread #-fsanitize=address #-fsanitize=undefined
 
 SRCPATH := ./src
 TESTPATH := ./test
@@ -8,7 +8,7 @@ BINPATH := ./bin
 OBJPATH := $(BINPATH)/obj
 TESTOBJPATH := $(BINPATH)/testobj
 LIBPATHS := ./dep/lib
-LIBFLAGS := -lpthread
+LIBFLAGS := #-lpthread
 INCLUDEPATH := ./dep/include
 MAKEDEPSPATH := ./etc/make-deps
 

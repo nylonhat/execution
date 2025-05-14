@@ -14,7 +14,7 @@
 #include <atomic>
 #include <iostream>
 
-namespace {
+namespace test{
 
     constexpr inline auto add = [](auto... v) {
     	return (... + v);
@@ -49,7 +49,7 @@ namespace {
             a.fetch_sub(1);
             a.fetch_sub(1);
             a.fetch_sub(1);
-			a.fetch_sub(1);
+            a.fetch_sub(1);
             return (... + v);
         }
     };
@@ -167,6 +167,24 @@ namespace {
 		
 		CHECK(result == 5);
 	}
+
+	
+	TEST_CASE("branch tail recursion"){
+    	ex::Threadpool<0> scheduler{};
+	
+    	auto result = ex::value(4)
+    		| ex::branch(scheduler, ex::value(1))
+			| ex::branch(scheduler, ex::value(42)) 
+			| ex::branch(scheduler, ex::value(69)) 
+			| ex::branch(scheduler, ex::value(111)) 
+    		| ex::map_value(add)
+    		| ex::repeat_n_value(1000001)
+    		| ex::sync_wait;
+			
+		auto control = 4+1+42+69+111;
+
+    	CHECK(result == control);
+    }
 
 
 }//namespace

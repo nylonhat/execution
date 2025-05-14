@@ -74,7 +74,9 @@ namespace ex::algorithms::fold {
 				return ex::set_value<Cont...>(this->get_receiver(), cont..., folded_value);
 			}
 			
-			return ex::start(LoopOp::template get<0>());
+			return ex::start(LoopOp::template get<0>(), cont...);
+			// static_assert(sizeof...(cont) == 0);
+			// return set_value<0, 0, Cont...>(cont...);
 		}
 		
 		//Scheduler Callback
@@ -91,8 +93,10 @@ namespace ex::algorithms::fold {
 				if (old_tag == head_now){
 					return ex::start(cont...);
 				}
-				
-				return finish(cont...);
+
+				if constexpr(!first_same_as<typename ChildOps::ChildOp, Cont...>){
+					return finish(cont...);
+				}
 			}
 			
 			//Acquire a slot
@@ -144,15 +148,17 @@ namespace ex::algorithms::fold {
 			//Release the slot
 			auto old_tag = ticket_ring.at(old_tail % Size).tag.fetch_add(Size-1);
 			
-			if constexpr(!first_same_as<typename LoopOp::template VariantOp<0>, Cont...>){
+			if constexpr((!first_same_as<typename LoopOp::template VariantOp<0>, Cont...>) && (!first_same_as<typename ChildOps::ChildOp, Cont...>)){
 				//Wake up producer
 				if(old_tag == old_tail + 2){
 					return produce(cont...);
 				}
-			}
 			
-			if(old_tag == old_tail + 3){
-				return finish(cont...);
+			
+				if(old_tag == old_tail + 3){
+					return finish(cont...);
+				}
+
 			}
 			
 			return ex::start(cont...);
@@ -160,6 +166,8 @@ namespace ex::algorithms::fold {
 		
 		template<class... Cont>
 		void finish(Cont&... cont){
+			
+			static_assert(sizeof...(cont) == 0);
 			for(std::size_t i = 0; i < std::min(tail.load(), Size); ++i){
 				auto value = ChildOps::get_result_at(i);
 				folded_value = function(value, folded_value);
