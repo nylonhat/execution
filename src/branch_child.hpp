@@ -6,10 +6,9 @@
 
 namespace ex::algorithms::branch_all {
     
-    template<class ParentOp, std::size_t ChildIndex, IsSingleValueSender ChildSender>
+    template<class ParentOp, auto Tag, IsSingleValueSender ChildSender>
     struct BranchChildOp {
 
-        template <std::size_t VariantIndex>
         struct Receiver {
             using ReceiverOptIn = ex::ReceiverOptIn;
 
@@ -30,19 +29,19 @@ namespace ex::algorithms::branch_all {
 
             template<class... Cont, class... Arg>
             auto set_value(Cont&... cont, Arg... arg){
-                return parent_op->template set_value<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
+                return parent_op->template set_value<Tag, Cont...>(cont..., arg...);
             }
 
             template<class... Cont, class... Arg>
             auto set_error(Cont&... cont, Arg... arg){
-                return parent_op->template set_error<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
+                return parent_op->template set_error<Tag, Cont...>(cont..., arg...);
             }
           
         };
 
 
         using Sender = ChildSender;
-        using ChildOp = ex::connect_t<ChildSender, Receiver<0>>;
+        using ChildOp = ex::connect_t<ChildSender, Receiver>;
         using Result = ex::single_value_t<ChildSender>;
     
         alignas(Sender) alignas(ChildOp) alignas(Result) std::array<std::byte, std::max({sizeof(Sender), sizeof(ChildOp), sizeof(Result)})> storage;
@@ -56,7 +55,7 @@ namespace ex::algorithms::branch_all {
     
         auto& construct_from(ChildSender child_sender){
             auto* parent_op = static_cast<ParentOp*>(this);
-            return *::new (&storage) ChildOp (ex::connect(child_sender, Receiver<0>{parent_op}));
+            return *::new (&storage) ChildOp (ex::connect(child_sender, Receiver{parent_op}));
         }
         
         auto& construct_result(Result result){

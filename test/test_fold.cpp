@@ -20,7 +20,8 @@ namespace test {
 
 	TEST_CASE("Async accumulate with bounded concurrency"){
 		
-		ex::Threadpool<16> pool = {};
+		ex::Threadpool<16> threadpool{};
+		auto scheduler = threadpool.scheduler();
 		
 		auto add = [](auto a, auto b){
 			return a + b;
@@ -32,7 +33,7 @@ namespace test {
 		auto sender_range = std::views::iota(min, max)
 			| std::views::transform(ex::value);
 			
-		auto result = ex::fold_on<2>(pool, sender_range, ex::value, min, add)
+		auto result = ex::fold_on<2>(scheduler, sender_range, ex::value, min, add)
 			| ex::sync_wait;
 		
 		auto control = std::ranges::fold_left(std::views::iota(min, max), min, add);
@@ -43,7 +44,8 @@ namespace test {
 	
 	TEST_CASE("Async accumulate inline scheduler"){
 		
-		ex::Threadpool<0> pool = {};
+		ex::Threadpool<0> threadpool{};
+		auto scheduler = threadpool.scheduler();
 		
 		auto add = [](auto a, auto b){
 			return a + b;
@@ -55,7 +57,7 @@ namespace test {
 		auto sender_range = std::views::iota(min, max)
 			| std::views::transform(ex::value);
 			
-		auto result = ex::fold_on<2>(pool, sender_range, ex::value, min, add)
+		auto result = ex::fold_on<2>(scheduler, sender_range, ex::value, min, add)
 			| ex::sync_wait;
 		
 		auto control = std::ranges::fold_left(std::views::iota(min, max), min, add);
@@ -66,7 +68,8 @@ namespace test {
 
 	TEST_CASE("Chunk accumulate"){
 		
-		ex::Threadpool<16> pool = {};
+		ex::Threadpool<16> threadpool{};
+		auto scheduler = threadpool.scheduler();
 		
 		auto add = [](auto a, auto b){
 			return a + b;
@@ -91,7 +94,7 @@ namespace test {
 			     | ex::map_value(fold_chunk);
 		};
 			
-		auto result = ex::fold_on<16>(pool, sender_range, async_fold_chunk, min, add)
+		auto result = ex::fold_on<16>(scheduler, sender_range, async_fold_chunk, min, add)
 			| ex::sync_wait;
 		
 		auto control = std::ranges::fold_left(std::views::iota(min, max), min, add);
@@ -103,7 +106,8 @@ namespace test {
 
 	TEST_CASE("Fold tail call optimisation"){
 		
-		ex::Threadpool<0> pool = {};
+		ex::Threadpool<0> threadpool{};
+		auto scheduler = threadpool.scheduler();
 		
 		auto add = [](auto a, auto b){
 			return a + b;
@@ -115,7 +119,7 @@ namespace test {
 		auto sender_range = std::views::iota(min, max)
 			| std::views::transform(ex::value);
 			
-		auto result = ex::fold_on<2>(pool, sender_range, ex::value, min, add)
+		auto result = ex::fold_on<2>(scheduler, sender_range, ex::value, min, add)
 		    | ex::repeat_n_value(1000000)
 			| ex::sync_wait;
 		

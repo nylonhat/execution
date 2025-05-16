@@ -9,6 +9,10 @@
 #include "variant_child.hpp"
 
 namespace ex::algorithms::branch_all {
+	
+	struct ChildTag {
+		std::size_t child_index = 0;
+	};
 
 	template<class...>
 	struct OpStateBase;
@@ -18,10 +22,10 @@ namespace ex::algorithms::branch_all {
 		: InlinedReceiver<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, SuffixReceiver>
 		, VariantChildOp<
 			OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, 
-			sizeof...(Senders), 
+			0, 
 			std::conditional_t<true, typename Scheduler::sender_t, decltype(I)>...
 		  >
-		, BranchChildOp<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, I, Senders>...
+		, BranchChildOp<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, ChildTag{I}, Senders>...
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
@@ -29,11 +33,11 @@ namespace ex::algorithms::branch_all {
 		using SchedulerSender = Scheduler::sender_t;
 		using SchedulerOp = VariantChildOp<
 			OpStateBase, 
-			sizeof...(Senders), 
+			0, 
 			std::conditional_t<true, SchedulerSender, decltype(I)>...
 		>;
 		
-		template<std::size_t ChildIndex> using ChildOp = BranchChildOp<OpStateBase, ChildIndex, Senders...[ChildIndex]>;
+		template<std::size_t Index> using ChildOp = BranchChildOp<OpStateBase, ChildTag{Index}, Senders...[Index]>;
 
 		static constexpr std::size_t size = sizeof...(Senders);
 		
@@ -55,7 +59,6 @@ namespace ex::algorithms::branch_all {
 		
 		//Scheduler Callback
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
-			requires same_index<ChildIndex, size>
 		auto set_value(Cont&... cont){
 			auto& child_sender = ChildOp<VariantIndex>::get_sender();
 			auto& child_op = ChildOp<VariantIndex>::construct_from(child_sender);
@@ -70,20 +73,19 @@ namespace ex::algorithms::branch_all {
 		
 
 		//Child Result Callback (No schedule)
-		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
-			requires not_same_index<ChildIndex, size>
-			&& (first_same_as<typename SchedulerOp::template VariantOp<ChildIndex+1>::Loopback, Cont...> || first_same_as<typename ChildOp<ChildIndex+1>::ChildOp, Cont...>)
+		template<ChildTag tag, class... Cont, class... Args>
+			requires first_same_as<typename SchedulerOp::template VariantOp<tag.child_index+1>::Loopback, Cont...> 
+			|| first_same_as<typename ChildOp<tag.child_index+1>::ChildOp, Cont...>
 		auto set_value(Cont&... cont, Args... args){
-        	ChildOp<ChildIndex>::construct_result(args...);
+        	ChildOp<tag.child_index>::construct_result(args...);
 	        counter.fetch_sub(1);
 			return ex::start(cont...);
         }
         
 		//Child Result Callback
-		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
-			requires not_same_index<ChildIndex, size>
+		template<ChildTag tag, class... Cont, class... Args>
 		auto set_value(Cont&... cont, Args... args){
-        	ChildOp<ChildIndex>::construct_result(args...);
+        	ChildOp<tag.child_index>::construct_result(args...);
 	        auto old = counter.fetch_sub(1);
 			
 			if(old == 0){
@@ -138,20 +140,20 @@ namespace ex::algorithms::branch_all {
 
 	struct FunctionObject {
 
-		auto operator()(this auto&&, IsScheduler auto& scheduler, IsSender auto... senders){
-			auto handle = SchedulerHandle{scheduler};
+		auto operator()(this auto&&, IsScheduler auto scheduler, IsSender auto... senders){
 			
 			auto lambda = [&](auto... senders){
-				return Sender{handle, senders...};
+				return Sender{scheduler, senders...};
 			};
-
-			return std::apply(lambda, std::tuple_cat((Sender{handle, senders}.tuple)...));		
+			
+			//Combine branches together if same scheduler
+			return std::apply(lambda, std::tuple_cat((Sender{scheduler, senders}.tuple)...));		
 		}
 		
 	};
 
 	
-}//namespace ex::algorithms::branch
+}//namespace ex::algorithms::branch_all
 
 namespace ex {
 
@@ -164,20 +166,20 @@ namespace ex::algorithms::branch {
 	struct FunctionObject {
 		
 		template<IsScheduler Scheduler, IsSender Sender1, IsSender Sender2>
-		auto operator()(this auto&& self, Scheduler& scheduler, Sender1 sender1, Sender2 sender2){
+		auto operator()(this auto&& self, Scheduler scheduler, Sender1 sender1, Sender2 sender2){
 			return ex::branch_all(scheduler, sender1, sender2);
 		}
 
 		
 		template<IsScheduler Scheduler, IsSender Sender2>
-		auto operator()(this auto&& self, Scheduler& scheduler, Sender2 sender2){
-			return [&scheduler, sender2]<IsSender Sender1>(Sender1 sender1){
+		auto operator()(this auto&& self, Scheduler scheduler, Sender2 sender2){
+			return [scheduler, sender2]<IsSender Sender1>(Sender1 sender1){
 				return ex::branch_all(scheduler, sender1, sender2);
 			};
 		}
 	};
 	
-}//namespace ex::algorithms::branch::single
+}//namespace ex::algorithms::branch
 
 namespace ex {
 

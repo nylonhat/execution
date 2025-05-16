@@ -213,9 +213,8 @@ namespace ex::algorithms::fold {
 	struct FunctionObject {
 		
 		template<IsScheduler Scheduler, std::ranges::range SenderRange, class MonadicFunction, class Init, class Function>
-		auto operator()(this auto&&, Scheduler& scheduler, SenderRange sender_range, MonadicFunction monadic_function, Init init, Function function){
-			auto handle = SchedulerHandle{scheduler};
-			return Sender<Size, SchedulerHandle<Scheduler>, SenderRange, MonadicFunction, Init, Function>{handle, sender_range, monadic_function, init, function};	
+		auto operator()(this auto&&, Scheduler scheduler, SenderRange sender_range, MonadicFunction monadic_function, Init init, Function function){
+			return Sender<Size, Scheduler, SenderRange, MonadicFunction, Init, Function>{scheduler, sender_range, monadic_function, init, function};	
 		}
 		
 	};

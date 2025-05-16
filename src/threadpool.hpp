@@ -4,9 +4,8 @@
 #include "scheduler.hpp"
 #include "concepts.hpp"
 #include "inlined_receiver.hpp"
-#include "pure.hpp"
 #include "loopback_child.hpp"
-
+#include "inline_scheduler.hpp"
 #include "bounded_threadpool.hpp"
 
 namespace ex {
@@ -26,7 +25,7 @@ namespace ex {
 				: type_ptr{std::addressof(op)}
 				, resume_ptr{[](void* type_ptr){
 					O& op = *static_cast<O*>(type_ptr);
-					return op.resume();
+					return op.loopback();
 				}} 
 			{}
 
@@ -37,37 +36,33 @@ namespace ex {
 			}
 		};
 		
-		using Pool = BoundedThreadpool<thread_count, OpHandle>;
+		using ExecutionResource = BoundedThreadpool<thread_count, OpHandle>;
 		
-		template<class NextReceiver>
+		ExecutionResource execution_resource = {};
+		
+		template<class Receiver>
 		struct OpState 
-			: ex::InlinedReceiver<OpState<NextReceiver>, NextReceiver>
-			, ex::LoopbackChildOp<OpState<NextReceiver>>
+			: ex::InlinedReceiver<OpState<Receiver>, Receiver>
+			, ex::LoopbackChildOp<OpState<Receiver>>
 		{
 			using OpStateOptIn = ex::OpStateOptIn;
-			using Receiver = ex::InlinedReceiver<OpState, NextReceiver>;
+			using InlinedReceiver = ex::InlinedReceiver<OpState, Receiver>;
 			using Loopback = ex::LoopbackChildOp<OpState>;
 
-			Pool* pool = nullptr;
+			ExecutionResource* execution_resource = nullptr;
 
-			OpState(NextReceiver next_receiver, Pool* pool)
-				: Receiver{next_receiver}
-				, pool{pool}
+			OpState(Receiver receiver, ExecutionResource* execution_resource)
+				: InlinedReceiver{receiver}
+				, execution_resource{execution_resource}
 			{}
 
 			template<class... Cont>
 			void start(Cont&... cont){
-				if(pool->try_schedule(*this)){
+				if(execution_resource->try_schedule(*this)){
 					return ex::start(cont...); 
 				}
 
-				//return ex::set_value<Cont...>(this->get_receiver(), cont...);
 				return ex::start(cont..., Loopback::get());
-			}
-
-			
-			void resume(){
-				return ex::set_value<>(this->get_receiver());
 			}
 			
 			template<class... Cont>
@@ -83,70 +78,37 @@ namespace ex {
 			using error_t = std::tuple<>;
 			
 
-			Pool* pool = nullptr;
+			ExecutionResource* execution_resource = nullptr;
 			
 			template<class NextReceiver>
 			auto connect(NextReceiver next_receiver){
-				return OpState<NextReceiver>{next_receiver, pool};
+				return OpState<NextReceiver>{next_receiver, execution_resource};
 			}
 		};
 		
-		Pool pool = {};
+		struct Scheduler {
+			using sender_t = Sender;
+			
+			ExecutionResource* execution_resource = nullptr;
+			
+			auto sender(){
+				return Sender{execution_resource};
+			}
+		};
 		
-		using sender_t = Sender;
-		
-		auto sender(){
-			return Sender{&pool};
+		auto scheduler(){
+			return Scheduler{&execution_resource};
 		}
-		
 		
 	};
 	
 	template<>
 	struct Threadpool<0> {
-	
-		template<class NextReceiver>
-		struct OpState 
-			: ex::InlinedReceiver<OpState<NextReceiver>, NextReceiver>
-			, ex::LoopbackChildOp<OpState<NextReceiver>>
-		{
-			using OpStateOptIn = ex::OpStateOptIn;
-			using Receiver = ex::InlinedReceiver<OpState, NextReceiver>;
-			using Loopback = ex::LoopbackChildOp<OpState>;
-
-
-			OpState(NextReceiver next_receiver)
-				: Receiver{next_receiver}
-			{}
-
-			template<class... Cont>
-			void start(Cont&... cont){
-				return ex::start(cont..., Loopback::get());
-			}
-			
-			template<class... Cont>
-			void loopback(Cont&... cont){
-				return ex::set_value<Cont...>(this->get_receiver(), cont...);
-			}
-			
-		};
-
-		struct Sender {
-			using SenderOptIn = ex::SenderOptIn;
-			using value_t = std::tuple<>;
-			using error_t = std::tuple<>;
-			
-			template<class NextReceiver>
-			auto connect(NextReceiver next_receiver){
-				return OpState<NextReceiver>{next_receiver};
-			}
-		};
 		
-		using sender_t = Sender;
-		
-		auto sender(){
-			return Sender{};
+		auto scheduler(){
+			return InlineScheduler{};
 		}
+
 	};
 	
 }

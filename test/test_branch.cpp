@@ -57,8 +57,10 @@ namespace test{
 	
     TEST_CASE("Benchmark: branch with inline scheduler"){
 
-    	ex::Threadpool<0> scheduler{};
-        const size_t iterations = 10'000'000;
+    	ex::Threadpool<0> threadpool{};
+		auto scheduler = threadpool.scheduler();
+        
+		const size_t iterations = 10'000'000;
 
         auto control = ex::value(4)
             | ex::map_value(Fetch3{})
@@ -79,7 +81,8 @@ namespace test{
 	
 
     TEST_CASE("Benchmark: branch on 1 thread"){
-    	ex::Threadpool<1> scheduler{};
+    	ex::Threadpool<1> threadpool{};
+		auto scheduler = threadpool.scheduler();
 	
         const size_t iterations = 10'000'000;
         
@@ -100,7 +103,8 @@ namespace test{
     }
 	
 	TEST_CASE("branch multiple times"){
-    	ex::Threadpool<4> scheduler{};
+    	ex::Threadpool<4> threadpool{};
+		auto scheduler = threadpool.scheduler();
 	
     	auto result = ex::value(4)
     		| ex::branch(scheduler, ex::value(1))
@@ -119,7 +123,8 @@ namespace test{
 
 	TEST_CASE("Schedule Sender"){
 		
-    	ex::Threadpool<1> scheduler{};
+    	ex::Threadpool<1> threadpool{};
+		auto scheduler = threadpool.scheduler();
 		
 		auto result = scheduler.sender()
 			| ex::map_value([](){return 4;})
@@ -131,7 +136,8 @@ namespace test{
 
 	TEST_CASE("Schedule Error"){
 		
-    	ex::Threadpool<0> scheduler{};
+    	ex::Threadpool<1> threadpool{};
+		auto scheduler = threadpool.scheduler();
 		
 		auto result = scheduler.sender()
 			| ex::bind_value([](){return ex::value(10);})
@@ -143,7 +149,8 @@ namespace test{
 	
 
 	TEST_CASE("Start on"){
-    	ex::Threadpool<1> scheduler{};
+    	ex::Threadpool<1> threadpool{};
+		auto scheduler = threadpool.scheduler();
 		
 		auto start_on = [](auto& scheduler, auto sender){
 			return scheduler.sender()
@@ -158,7 +165,8 @@ namespace test{
 	}
 
 	TEST_CASE("start on efficent"){
-    	ex::Threadpool<1> scheduler{};
+    	ex::Threadpool<1> threadpool{};
+		auto scheduler = threadpool.scheduler();
 		
 		auto start_on = [](auto& scheduler, auto sender){
 			return scheduler.sender()
@@ -173,7 +181,8 @@ namespace test{
 
 	
 	TEST_CASE("branch tail recursion"){
-    	ex::Threadpool<0> scheduler{};
+    	ex::Threadpool<0> threadpool{};
+		auto scheduler = threadpool.scheduler();
 	
     	auto result = ex::value(4)
     		| ex::branch(scheduler, ex::value(1))
