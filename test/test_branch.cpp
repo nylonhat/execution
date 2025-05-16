@@ -76,6 +76,7 @@ namespace test{
 
     	CHECK((result/iterations) < (control/iterations));
     }
+	
 
     TEST_CASE("Benchmark: branch on 1 thread"){
     	ex::Threadpool<1> scheduler{};
@@ -126,6 +127,7 @@ namespace test{
 
 		CHECK(result == 4);
 	}
+	
 
 	TEST_CASE("Schedule Error"){
 		
@@ -138,6 +140,7 @@ namespace test{
 
 		CHECK(result == 10);
 	}
+	
 
 	TEST_CASE("Start on"){
     	ex::Threadpool<1> scheduler{};
@@ -185,6 +188,8 @@ namespace test{
 
     	CHECK(result == control);
     }
+	
+	
 
 
 }//namespace

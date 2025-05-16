@@ -132,7 +132,7 @@ namespace ex::algorithms::fold {
 			
 			auto& child_op = ChildOps::construct_from_sender_at(monadic_function(args...), ticket);
 			auto& scheduler_op = LoopOp::template construct_from<0>(scheduler.sender());
-			return ex::start(cont..., scheduler_op, child_op);
+			return ex::start(scheduler_op, child_op, cont...);
 		}
 		
 
@@ -148,7 +148,7 @@ namespace ex::algorithms::fold {
 			//Release the slot
 			auto old_tag = ticket_ring.at(old_tail % Size).tag.fetch_add(Size-1);
 			
-			if constexpr((!first_same_as<typename LoopOp::template VariantOp<0>, Cont...>) && (!first_same_as<typename ChildOps::ChildOp, Cont...>)){
+			if constexpr((!first_same_as<typename LoopOp::template VariantOp<0>::Loopback, Cont...>) && (!first_same_as<typename ChildOps::ChildOp, Cont...>)){
 				//Wake up producer
 				if(old_tag == old_tail + 2){
 					return produce(cont...);

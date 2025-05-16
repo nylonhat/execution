@@ -5,6 +5,7 @@
 #include "concepts.hpp"
 #include "inlined_receiver.hpp"
 #include "pure.hpp"
+#include "loopback_child.hpp"
 
 #include "bounded_threadpool.hpp"
 
@@ -41,9 +42,11 @@ namespace ex {
 		template<class NextReceiver>
 		struct OpState 
 			: ex::InlinedReceiver<OpState<NextReceiver>, NextReceiver>
+			, ex::LoopbackChildOp<OpState<NextReceiver>>
 		{
 			using OpStateOptIn = ex::OpStateOptIn;
 			using Receiver = ex::InlinedReceiver<OpState, NextReceiver>;
+			using Loopback = ex::LoopbackChildOp<OpState>;
 
 			Pool* pool = nullptr;
 
@@ -58,11 +61,18 @@ namespace ex {
 					return ex::start(cont...); 
 				}
 
-				return ex::set_value<Cont...>(this->get_receiver(), cont...);
+				//return ex::set_value<Cont...>(this->get_receiver(), cont...);
+				return ex::start(cont..., Loopback::get());
 			}
 
+			
 			void resume(){
 				return ex::set_value<>(this->get_receiver());
+			}
+			
+			template<class... Cont>
+			void loopback(Cont&... cont){
+				return ex::set_value<Cont...>(this->get_receiver(), cont...);
 			}
 			
 		};
@@ -71,6 +81,7 @@ namespace ex {
 			using SenderOptIn = ex::SenderOptIn;
 			using value_t = std::tuple<>;
 			using error_t = std::tuple<>;
+			
 
 			Pool* pool = nullptr;
 			
@@ -94,10 +105,47 @@ namespace ex {
 	template<>
 	struct Threadpool<0> {
 	
-		using sender_t = decltype(ex::value());
+		template<class NextReceiver>
+		struct OpState 
+			: ex::InlinedReceiver<OpState<NextReceiver>, NextReceiver>
+			, ex::LoopbackChildOp<OpState<NextReceiver>>
+		{
+			using OpStateOptIn = ex::OpStateOptIn;
+			using Receiver = ex::InlinedReceiver<OpState, NextReceiver>;
+			using Loopback = ex::LoopbackChildOp<OpState>;
 
+
+			OpState(NextReceiver next_receiver)
+				: Receiver{next_receiver}
+			{}
+
+			template<class... Cont>
+			void start(Cont&... cont){
+				return ex::start(cont..., Loopback::get());
+			}
+			
+			template<class... Cont>
+			void loopback(Cont&... cont){
+				return ex::set_value<Cont...>(this->get_receiver(), cont...);
+			}
+			
+		};
+
+		struct Sender {
+			using SenderOptIn = ex::SenderOptIn;
+			using value_t = std::tuple<>;
+			using error_t = std::tuple<>;
+			
+			template<class NextReceiver>
+			auto connect(NextReceiver next_receiver){
+				return OpState<NextReceiver>{next_receiver};
+			}
+		};
+		
+		using sender_t = Sender;
+		
 		auto sender(){
-			return ex::value();
+			return Sender{};
 		}
 	};
 	

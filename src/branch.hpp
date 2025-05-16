@@ -62,9 +62,9 @@ namespace ex::algorithms::branch_all {
 			
 			if constexpr(!same_index<VariantIndex, size - 1>){
 				auto& scheduler_op = SchedulerOp::template construct_from<VariantIndex+1>(scheduler.sender());
-				return ex::start(cont..., scheduler_op, child_op);
+				return ex::start(scheduler_op, child_op, cont...);
 			} else {
-				return ex::start(cont..., child_op);
+				return ex::start(child_op, cont...);
 			}
 		}
 		
@@ -72,7 +72,7 @@ namespace ex::algorithms::branch_all {
 		//Child Result Callback (No schedule)
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
 			requires not_same_index<ChildIndex, size>
-			&& (first_same_as<typename SchedulerOp::template VariantOp<ChildIndex+2>, Cont...> || first_same_as<typename ChildOp<ChildIndex+1>::ChildOp, Cont...>)
+			&& (first_same_as<typename SchedulerOp::template VariantOp<ChildIndex+1>::Loopback, Cont...> || first_same_as<typename ChildOp<ChildIndex+1>::ChildOp, Cont...>)
 		auto set_value(Cont&... cont, Args... args){
         	ChildOp<ChildIndex>::construct_result(args...);
 	        counter.fetch_sub(1);
@@ -87,6 +87,7 @@ namespace ex::algorithms::branch_all {
 	        auto old = counter.fetch_sub(1);
 			
 			if(old == 0){
+				static_assert(sizeof...(cont) == 0);
 				return ex::set_value<Cont...>(this->get_receiver(), cont..., ChildOp<I>::get_result()...);
 			}
 
