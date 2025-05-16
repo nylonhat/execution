@@ -4,6 +4,7 @@ Experimental Async Library based on Senders and Recievers (p2300; std::execution
 	- gcc : [[gnu::musttail]]
 - Testing operator overloading syntax for: fmap, monadic bind, function application
 - Continuation Stealing implementation of scheduling algorithms
+	- Algorithms help adhere to structured concurrency principles
 
 ```
 constexpr inline auto add = [](auto... v) {
