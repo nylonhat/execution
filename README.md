@@ -10,7 +10,7 @@ constexpr inline auto add = [](auto... v) {
 	return (... + v);
 };
 
-constexpr inline auto id = [](auto i) {
+constexpr inline auto identity = [](auto i) {
 	return i;
 };
 
@@ -18,7 +18,7 @@ int main(){
 	///////////////
 	//Monadic style
 	///////////////
-	auto monadic = ex::value(42) > ex::value >= id | ex::sync_wait;
+	auto monadic = ex::value(42) > ex::value >= identity | ex::sync_wait;
 
 	///////////////////////////////////////////////
 	//Continuation stealing branching on threadpool
