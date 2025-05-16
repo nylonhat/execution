@@ -18,7 +18,7 @@ int main(){
 	///////////////
 	//Monadic style
 	///////////////
-	auto monadic = ex::value(42) > ex::value >= identity | ex::sync_wait;
+	auto meaning_of_life = ex::value(42) > ex::value >= identity | ex::sync_wait;
 
 	///////////////////////////////////////////////
 	//Continuation stealing branching on threadpool
