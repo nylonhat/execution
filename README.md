@@ -6,18 +6,55 @@ Experimental Async Library based on Senders and Recievers (p2300; std::execution
   - Continuation Stealing implementation of scheduling algorithms
 
 ```
+constexpr inline auto add = [](auto... v) {
+	return (... + v);
+};
+
 int main(){
+	///////////////
+	//Monadic style
+	///////////////
 	auto monadic = pure(42) > pure >= id | sync_wait;
-	std::println("Final result: {}", monadic);
 
-	Threadpool pool = {};
-	auto parallel = branch(pool, pure(42), pure(69)) 
-			> add
-			| repeat_n(100'000'000) 
-			| benchmark 
-			| sync_wait;
+	///////////////////////////////////////////////
+	//Continuation stealing branching on threadpool
+	///////////////////////////////////////////////
+	ex::Threadpool<16> threadpool{};
+	auto scheduler = threadpool.scheduler();
+	
+    	auto branching = ex::value(4)
+    		| ex::branch(scheduler, ex::value(1))
+		| ex::branch(scheduler, ex::value(42)) 
+		| ex::branch(scheduler, ex::value(69)) 
+		| ex::branch(scheduler, ex::value(111)) 
+    		| ex::map_value(add)
+    		| ex::sync_wait;
+	
+	//////////////////////////////////////////////////////
+	//Async chunk accumulate using generic fold algorithm
+	/////////////////////////////////////////////////////
+	std::size_t min = 0;
+	std::size_t max = 1000000;
+	
+	//Range of Senders of chunks views
+	auto sender_range = std::views::iota(min, max)
+		| std::views::chunk(max/16)
+		| std::views::transform(ex::value);
 
-	std::println("Final result: {}", parallel);
+	//Synchronous folding
+	auto fold_chunk = [=](auto chunk_view){
+		return std::ranges::fold_left(chunk_view, min, add);
+	};
+
+	//Async folding on each chunk
+	auto async_fold_chunk = [=](auto chunk_view){
+		return ex::value(chunk_view) 
+		     | ex::map_value(fold_chunk);
+	};
+
+	//Async fold with max concurrency of 16
+	auto sum = ex::fold_on<16>(scheduler, sender_range, async_fold_chunk, min, add)
+		| ex::sync_wait;
 
 	return 0;
 }
