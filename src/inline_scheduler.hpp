@@ -23,9 +23,14 @@ namespace ex {
 				: Receiver{next_receiver}
 			{}
 
-			template<class... Cont>
-			void start(Cont&... cont){
-				return ex::start(cont..., Loopback::get());
+			
+			void start(){
+				return ex::set_value<>(this->get_receiver());
+			}
+
+			template<class ContFirst, class... Cont>
+			void start(ContFirst& cont_first, Cont&... cont){
+				return ex::start(cont_first, Loopback::get(), cont...);
 			}
 			
 			template<class... Cont>

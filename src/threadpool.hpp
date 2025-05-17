@@ -55,14 +55,23 @@ namespace ex {
 				: InlinedReceiver{receiver}
 				, execution_resource{execution_resource}
 			{}
-
-			template<class... Cont>
-			void start(Cont&... cont){
+			
+			
+			void start(){
 				if(execution_resource->try_schedule(*this)){
-					return ex::start(cont...); 
+					return ex::start(); 
 				}
 
-				return ex::start(cont..., Loopback::get());
+				return ex::set_value<>(this->get_receiver());
+			}
+			
+			template<class ContFirst, class... Cont>
+			void start(ContFirst& cont_first, Cont&... cont){
+				if(execution_resource->try_schedule(*this)){
+					return ex::start(cont_first, cont...); 
+				}
+
+				return ex::start(cont_first, Loopback::get(), cont...);
 			}
 			
 			template<class... Cont>
