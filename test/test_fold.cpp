@@ -76,7 +76,7 @@ namespace test {
 		};
 		
 		std::size_t min = 0;
-		std::size_t max = 1000000;
+		std::size_t max = 1uz << 32uz;
 		
 		//Range of Senders of chunks views
 		auto sender_range = std::views::iota(min, max)
@@ -120,7 +120,7 @@ namespace test {
 			| std::views::transform(ex::value);
 			
 		auto result = ex::fold_on<2>(scheduler, sender_range, ex::value, min, add)
-		    | ex::repeat_n_value(1000000)
+		    | ex::repeat_n_value(10000000)
 			| ex::sync_wait;
 		
 		auto control = std::ranges::fold_left(std::views::iota(min, max), min, add);

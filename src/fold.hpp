@@ -42,7 +42,7 @@ namespace ex::algorithms::fold {
 		std::size_t head = 0;
 		std::atomic<std::size_t> tail = 0;
 		
-		struct TicketCell {
+		struct alignas(64) TicketCell {
 			std::size_t ticket;
 			std::atomic<std::size_t> tag;
 		};

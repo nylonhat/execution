@@ -75,6 +75,7 @@ private:
 				if(local_queues.at(random_index).try_steal(task)){
 					task();
 					//backoff.reset();
+					backoff.easein();
 					break;
 				}
 			}
@@ -83,7 +84,7 @@ private:
 				continue;
 			}
 		
-			//backoff.backoff();
+			backoff.backoff();
 		
 		}		
 	}

@@ -35,7 +35,7 @@ namespace ex::algorithms::fold {
         using ChildOp = ex::connect_t<ChildSender, Receiver>;
         using Result = ex::single_value_t<ChildSender>;
 		
-		union Cell {
+		union alignas(64) Cell {
 			bool init = false;
 			ChildOp child_op;
 			Result result;
