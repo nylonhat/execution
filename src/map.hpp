@@ -9,11 +9,11 @@ namespace ex::algorithms::map {
 	
 	template<Channel channel, class SuffixReceiver, IsSender ChildSender, class Function>
 	struct OpState
-		: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender, Function>, SuffixReceiver>
+		: InlinedReceiver<SuffixReceiver>
 		, VariantChildOp<OpState<channel, SuffixReceiver, ChildSender, Function>, 0, ChildSender> 
 	{ 
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
+		using Receiver = InlinedReceiver<SuffixReceiver>;
 		using ChildOp = VariantChildOp<OpState, 0, ChildSender>;
 		
 		[[no_unique_address]] Function function;
@@ -26,25 +26,25 @@ namespace ex::algorithms::map {
 
 		template<class... Cont>
 		auto start(Cont&... cont){
-			return ex::start(ChildOp::template get<0>(), cont...);
+			[[gnu::musttail]] return ex::start(ChildOp::template get<0>(), cont...);
 		}
 
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         auto set_value(Cont&... cont, Arg... args){
 			if constexpr(channel == Channel::value){
-				return ex::set_value<Cont...>(this->get_receiver(), cont..., function(args...));
+				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., function(args...));
 			} else if (channel == Channel::error){
-				return ex::set_value<Cont...>(this->get_receiver(), cont..., args...);
+				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., args...);
 			}
         }
 
         template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         auto set_error(Cont&... cont, Arg... args){
 			if constexpr(channel == Channel::value){
-				return ex::set_error<Cont...>(this->get_receiver(), cont..., args...);
+				[[gnu::musttail]] return ex::set_error<Cont...>(this->get_receiver(), cont..., args...);
 			} else if (channel == Channel::error){
-				return ex::set_error<Cont...>(this->get_receiver(), cont..., function(args...));
+				[[gnu::musttail]] return ex::set_error<Cont...>(this->get_receiver(), cont..., function(args...));
 			}
         }		
 	};       

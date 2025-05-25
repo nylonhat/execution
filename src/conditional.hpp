@@ -9,12 +9,12 @@ namespace ex::algorithms::channel_else {
 
 	template<Channel channel, class SuffixReceiver, class Predicate, class ChildSender>
 	struct OpState 
-		: InlinedReceiver<OpState<channel, SuffixReceiver, Predicate, ChildSender>, SuffixReceiver>
+		: InlinedReceiver<SuffixReceiver>
 		, VariantChildOp<OpState<channel, SuffixReceiver, Predicate, ChildSender>, 0, ChildSender>
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
+		using Receiver = InlinedReceiver<SuffixReceiver>;
 		using ChildOp =  VariantChildOp<OpState, 0, ChildSender>;
 
 		Predicate predicate;

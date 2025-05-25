@@ -190,7 +190,7 @@ namespace test{
 			| ex::branch(scheduler, ex::value(69)) 
 			| ex::branch(scheduler, ex::value(111)) 
     		| ex::map_value(add)
-    		| ex::repeat_n_value(1000001)
+    		| ex::repeat_n_value(10'000'000)
     		| ex::sync_wait;
 			
 		auto control = 4+1+42+69+111;

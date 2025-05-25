@@ -9,12 +9,12 @@ namespace ex::algorithms::repeat_while {
 
 	template<Channel channel, IsReceiver SuffixReceiver, IsSender ChildSender1, class Predicate, class MonadicFunction>
 	struct OpState 
-		: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, SuffixReceiver>
+		: InlinedReceiver<SuffixReceiver>
 		, VariantChildOp<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>
 	{
 
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
+		using Receiver = InlinedReceiver<SuffixReceiver>;
 		using ChildOps = VariantChildOp<OpState, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>; 
 
 		[[no_unique_address]] Predicate predicate;
@@ -29,7 +29,7 @@ namespace ex::algorithms::repeat_while {
 	
 		template<class... Cont>
 		void start(Cont&... cont){
-			return ex::start(ChildOps::template get<0>(), cont...);
+			[[gnu::musttail]] return ex::start(ChildOps::template get<0>(), cont...);
 		}
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
@@ -40,10 +40,10 @@ namespace ex::algorithms::repeat_while {
 	        	if(predicate(args...)){
 	        		auto child_sender2 = monadic_function(args...);
 	        		auto& child_op2 = ChildOps::template construct_from<1>(child_sender2);
-	        		return ex::start(child_op2, cont...);
+	        		[[gnu::musttail]] return ex::start(child_op2, cont...);
 	        	}
         	}
-			return ex::set_value<Cont...>(this->get_receiver(), cont..., args...);
+			[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., args...);
         }
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
@@ -52,11 +52,11 @@ namespace ex::algorithms::repeat_while {
 	        	if(predicate(args...)){
 	        		auto child_sender2 = monadic_function(args...);
 	        		auto& child_op2 = ChildOps::template construct_from<1>(child_sender2);
-	        		return ex::start(child_op2, cont...);
+	        		[[gnu::musttail]] return ex::start(child_op2, cont...);
 	        	}
         	}
         	
-			return ex::set_error<Cont...>(this->get_receiver(), cont..., args...);
+			[[gnu::musttail]] return ex::set_error<Cont...>(this->get_receiver(), cont..., args...);
         }
 	};
 

@@ -103,7 +103,7 @@ namespace test {
     
     }    
 
-
+	
 	TEST_CASE("Fold tail call optimisation"){
 		
 		ex::Threadpool<0> threadpool{};
@@ -120,7 +120,7 @@ namespace test {
 			| std::views::transform(ex::value);
 			
 		auto result = ex::fold_on<2>(scheduler, sender_range, ex::value, min, add)
-		    | ex::repeat_n_value(10000000)
+		    | ex::repeat_n_value(10'000'000)
 			| ex::sync_wait;
 		
 		auto control = std::ranges::fold_left(std::views::iota(min, max), min, add);
@@ -128,6 +128,8 @@ namespace test {
 		CHECK(result == control);
     
     }
+	
+	
 
 }//namespace
 

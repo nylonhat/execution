@@ -42,11 +42,11 @@ namespace ex {
 		
 		template<class Receiver>
 		struct OpState 
-			: ex::InlinedReceiver<OpState<Receiver>, Receiver>
+			: ex::InlinedReceiver<Receiver>
 			, ex::LoopbackChildOp<OpState<Receiver>>
 		{
 			using OpStateOptIn = ex::OpStateOptIn;
-			using InlinedReceiver = ex::InlinedReceiver<OpState, Receiver>;
+			using InlinedReceiver = ex::InlinedReceiver<Receiver>;
 			using Loopback = ex::LoopbackChildOp<OpState>;
 
 			ExecutionResource* execution_resource = nullptr;

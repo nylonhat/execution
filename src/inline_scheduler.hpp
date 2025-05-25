@@ -11,11 +11,11 @@ namespace ex {
 	
 		template<class NextReceiver>
 		struct OpState 
-			: ex::InlinedReceiver<OpState<NextReceiver>, NextReceiver>
+			: ex::InlinedReceiver<NextReceiver>
 			, ex::LoopbackChildOp<OpState<NextReceiver>>
 		{
 			using OpStateOptIn = ex::OpStateOptIn;
-			using Receiver = ex::InlinedReceiver<OpState, NextReceiver>;
+			using Receiver = ex::InlinedReceiver<NextReceiver>;
 			using Loopback = ex::LoopbackChildOp<OpState>;
 
 

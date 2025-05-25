@@ -10,12 +10,12 @@ namespace ex::algorithms::benchmark {
 	
 	template<IsReceiver SuffixReceiver, IsSender ChildSender>
 	struct OpState
-		: InlinedReceiver<OpState<SuffixReceiver, ChildSender>, SuffixReceiver>
+		: InlinedReceiver<SuffixReceiver>
 		, VariantChildOp<OpState<SuffixReceiver, ChildSender>, 0, ChildSender>
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
+		using Receiver = InlinedReceiver<SuffixReceiver>;
 		using ChildOp =  VariantChildOp<OpState, 0, ChildSender>;
 		Timer timer = {};
 	

@@ -16,11 +16,11 @@ namespace ex::algorithms::pure {
     
     template<Channel channel, size_t... I, class NextReceiver, class... Values>
     struct OpStateBase<channel, std::index_sequence<I...>, NextReceiver, Values...>
-        : InlinedReceiver<OpStateBase<channel, std::index_sequence<I...>, NextReceiver, Values...>, NextReceiver>
+        : InlinedReceiver<NextReceiver>
         , Leaf<I, Values>...
     {
 		using OpStateOptIn = ex::OpStateOptIn;
-        using Receiver = InlinedReceiver<OpStateBase, NextReceiver>;
+        using Receiver = InlinedReceiver<NextReceiver>;
         
         constexpr OpStateBase(NextReceiver next_receiver, Values... values)
             : Receiver{next_receiver}
@@ -30,9 +30,9 @@ namespace ex::algorithms::pure {
         template<class... Cont>
         constexpr void start(Cont&... cont){
             if constexpr(channel == Channel::value){
-                return ex::set_value<Cont...>(this->get_receiver(), cont..., Leaf<I, Values>::member...);
+                [[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., Leaf<I, Values>::member...);
             } else if(channel == Channel::error){
-                return ex::set_error<Cont...>(this->get_receiver(), cont..., Leaf<I, Values>::member...);
+                [[gnu::musttail]] return ex::set_error<Cont...>(this->get_receiver(), cont..., Leaf<I, Values>::member...);
             }
         }
     };

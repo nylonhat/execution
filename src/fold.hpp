@@ -17,13 +17,13 @@ namespace ex::algorithms::fold {
 	template<std::size_t Size, IsReceiver SuffixReceiver, IsScheduler Scheduler, std::ranges::range SenderRange, class MonadicFunction, class Init, class Function>
 		requires (Size > 1)
 	struct OpState
-		: InlinedReceiver<OpState<Size, SuffixReceiver, Scheduler, SenderRange, MonadicFunction, Init, Function>, SuffixReceiver>
+		: InlinedReceiver<SuffixReceiver>
 		, VariantChildOp<OpState<Size, SuffixReceiver, Scheduler, SenderRange, MonadicFunction, Init, Function>, 0, typename Scheduler::sender_t, std::ranges::range_value_t<SenderRange>>
 		, FoldChildOp<Size, OpState<Size, SuffixReceiver, Scheduler, SenderRange, MonadicFunction, Init, Function>, ChildTag{}, ex::apply_values_t<MonadicFunction, std::ranges::range_value_t<SenderRange>>>
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
+		using Receiver = InlinedReceiver<SuffixReceiver>;
 		using SchedulerSender = Scheduler::sender_t;
 		using RangeSender = std::ranges::range_value_t<SenderRange>;
 		using LoopOp = VariantChildOp<OpState, 0, SchedulerSender, RangeSender>;

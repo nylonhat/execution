@@ -19,7 +19,7 @@ namespace ex::algorithms::branch_all {
 
 	template<IsReceiver SuffixReceiver, IsScheduler Scheduler, IsSender... Senders, std::size_t... I>
 	struct OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>
-		: InlinedReceiver<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, SuffixReceiver>
+		: InlinedReceiver<SuffixReceiver>
 		, VariantChildOp<
 			OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, 
 			0, 
@@ -29,7 +29,7 @@ namespace ex::algorithms::branch_all {
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<OpStateBase, SuffixReceiver>;
+		using Receiver = InlinedReceiver<SuffixReceiver>;
 		using SchedulerSender = Scheduler::sender_t;
 		using SchedulerOp = VariantChildOp<
 			OpStateBase, 
@@ -54,7 +54,7 @@ namespace ex::algorithms::branch_all {
 		template<class... Cont>
 		auto start(Cont&... cont){
 			//return SchedulerOp::template start<0, Cont...>(cont...);
-			return set_value<size, 0, Cont...>(cont...); 
+			[[gnu::musttail]] return set_value<size, 0, Cont...>(cont...); 
 		}
 		
 		//Scheduler Callback
@@ -65,9 +65,9 @@ namespace ex::algorithms::branch_all {
 			
 			if constexpr(!same_index<VariantIndex, size - 1>){
 				auto& scheduler_op = SchedulerOp::template construct_from<VariantIndex+1>(scheduler.sender());
-				return ex::start(scheduler_op, child_op, cont...);
+				[[gnu::musttail]] return ex::start(scheduler_op, child_op, cont...);
 			} else {
-				return ex::start(child_op, cont...);
+				[[gnu::musttail]] return ex::start(child_op, cont...);
 			}
 		}
 		
@@ -79,7 +79,7 @@ namespace ex::algorithms::branch_all {
 		auto set_value(Cont&... cont, Args... args){
         	ChildOp<tag.child_index>::construct_result(args...);
 	        counter.fetch_sub(1);
-			return ex::start(cont...);
+			[[gnu::musttail]] return ex::start(cont...);
         }
         
 		//Child Result Callback
@@ -90,10 +90,10 @@ namespace ex::algorithms::branch_all {
 			
 			if(old == 0){
 				static_assert(sizeof...(cont) == 0);
-				return ex::set_value<Cont...>(this->get_receiver(), cont..., ChildOp<I>::get_result()...);
+				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., ChildOp<I>::get_result()...);
 			}
 
-			return ex::start(cont...);
+			[[gnu::musttail]] return ex::start(cont...);
         }
 
 	};
