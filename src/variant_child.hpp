@@ -33,34 +33,65 @@ namespace ex {
         struct Receiver {
             using ReceiverOptIn = ex::ReceiverOptIn;
 
-            ParentOp* parent_op;
+			template<class Derived>
+            struct InlinedReceiver {
+				using ReceiverOptIn = ex::ReceiverOptIn;
+				
+				template<class... Cont, class... Arg>
+				auto set_value(Cont&... cont, Arg... arg){
+					auto* derived = static_cast<Derived*>(this);
+					auto* storage = reinterpret_cast<std::byte*>(derived);
+					auto* self = reinterpret_cast<VariantChildOp*>(storage);
+					auto* parent_op = static_cast<ParentOp*>(self);
+					[[gnu::musttail]] return parent_op->template set_value<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
+				}
+				
+				template<class... Cont, class... Arg>
+				auto set_error(Cont&... cont, Arg... arg){
+					auto* derived = static_cast<Derived*>(this);
+					auto* storage = reinterpret_cast<std::byte*>(derived);
+					auto* self = reinterpret_cast<VariantChildOp*>(storage);
+					auto* parent_op = static_cast<ParentOp*>(self);
+					[[gnu::musttail]] return parent_op->template set_error<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
+				}
+				
+				template<class... Cont>
+				auto set_stop(Cont&... cont){
+					auto* derived = static_cast<Derived*>(this);
+					auto* storage = reinterpret_cast<std::byte*>(derived);
+					auto* self = reinterpret_cast<VariantChildOp*>(storage);
+					auto* parent_op = static_cast<ParentOp*>(self);
+					[[gnu::musttail]] return parent_op->template set_stop<ChildIndex, VariantIndex, Cont...>(cont...);
+				}
+				
+				auto& get_receiver(){
+					return *this;
+				}
+
+			};
+			
+			
+			
+			ParentOp* parent_op;
 
             Receiver(ParentOp* parent_op)
                 : parent_op{parent_op}
             {}
-             
-            template<class ChildOp>
-            static Receiver make_for_child(ChildOp* child_op){
-                auto* storage = reinterpret_cast<std::byte*>(child_op);
-                auto* self = reinterpret_cast<VariantChildOp*>(storage);
-                auto* parent_op = static_cast<ParentOp*>(self);
-                return Receiver{parent_op};           
-            }
-
+            
 
             template<class... Cont, class... Arg>
             auto set_value(Cont&... cont, Arg... arg){
-                return parent_op->template set_value<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
+                [[gnu::musttail]] return parent_op->template set_value<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
             }
 
             template<class... Cont, class... Arg>
             auto set_error(Cont&... cont, Arg... arg){
-                return parent_op->template set_error<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
+                [[gnu::musttail]] return parent_op->template set_error<ChildIndex, VariantIndex, Cont...>(cont..., arg...);
             }
 			
 			template<class... Cont>
             auto set_stop(Cont&... cont){
-				return parent_op->template set_stop<ChildIndex, VariantIndex, Cont...>(cont...);
+				[[gnu::musttail]] return parent_op->template set_stop<ChildIndex, VariantIndex, Cont...>(cont...);
 			}
               
         };

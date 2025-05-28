@@ -11,6 +11,46 @@ namespace ex::algorithms::branch_all {
 
         struct Receiver {
             using ReceiverOptIn = ex::ReceiverOptIn;
+			
+			
+			template<class Derived>
+            struct InlinedReceiver {
+				using ReceiverOptIn = ex::ReceiverOptIn;
+				
+				template<class... Cont, class... Arg>
+				auto set_value(Cont&... cont, Arg... arg){
+					auto* derived = static_cast<Derived*>(this);
+					auto* storage = reinterpret_cast<std::byte*>(derived);
+					auto* self = reinterpret_cast<BranchChildOp*>(storage);
+					auto* parent_op = static_cast<ParentOp*>(self);
+					[[gnu::musttail]] return parent_op->template set_value<Tag, Cont...>(cont..., arg...);
+				}
+				
+				template<class... Cont, class... Arg>
+				auto set_error(Cont&... cont, Arg... arg){
+					auto* derived = static_cast<Derived*>(this);
+					auto* storage = reinterpret_cast<std::byte*>(derived);
+					auto* self = reinterpret_cast<BranchChildOp*>(storage);
+					auto* parent_op = static_cast<ParentOp*>(self);
+					[[gnu::musttail]] return parent_op->template set_error<Tag, Cont...>(cont..., arg...);
+				}
+				
+				template<class... Cont>
+				auto set_stop(Cont&... cont){
+					auto* derived = static_cast<Derived*>(this);
+					auto* storage = reinterpret_cast<std::byte*>(derived);
+					auto* self = reinterpret_cast<BranchChildOp*>(storage);
+					auto* parent_op = static_cast<ParentOp*>(self);
+					[[gnu::musttail]] return parent_op->template set_stop<Tag, Cont...>(cont...);
+				}
+				
+				auto& get_receiver(){
+					return *this;
+				}
+
+			};
+			
+			
 
             ParentOp* parent_op;
 
@@ -18,23 +58,15 @@ namespace ex::algorithms::branch_all {
                 : parent_op{parent_op}
             {}
          
-            template<class ChildOp>
-            static Receiver make_for_child(ChildOp* child_op){
-                auto* storage = reinterpret_cast<std::byte*>(child_op);
-                auto* self = reinterpret_cast<BranchChildOp*>(storage);
-                auto* parent_op = static_cast<ParentOp*>(self);
-                return Receiver{parent_op};           
-            }
-
 
             template<class... Cont, class... Arg>
             auto set_value(Cont&... cont, Arg... arg){
-                return parent_op->template set_value<Tag, Cont...>(cont..., arg...);
+                [[gnu::musttail]] return parent_op->template set_value<Tag, Cont...>(cont..., arg...);
             }
 
             template<class... Cont, class... Arg>
             auto set_error(Cont&... cont, Arg... arg){
-                return parent_op->template set_error<Tag, Cont...>(cont..., arg...);
+                [[gnu::musttail]] return parent_op->template set_error<Tag, Cont...>(cont..., arg...);
             }
           
         };
@@ -76,7 +108,7 @@ namespace ex::algorithms::branch_all {
 
         template<class... Cont>
         auto start_child_op(Cont&... cont){
-            return ex::start(get_child_op(), cont...);  
+            [[gnu::musttail]] return ex::start(get_child_op(), cont...);  
         }
             
     };

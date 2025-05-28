@@ -18,13 +18,13 @@ namespace ex::algorithms::split {
 
 	template<IsReceiver SuffixReceiver, IsScheduler Scheduler, IsSender SourceSender, class MonadicFunction>
 	struct OpState
-		: InlinedReceiver<SuffixReceiver>
+		: InlinedReceiver<OpState<SuffixReceiver, Scheduler, SourceSender, MonadicFunction>, SuffixReceiver>
 		, VariantChildOp<OpState<SuffixReceiver, Scheduler, SourceSender, MonadicFunction>, 0, typename Scheduler::sender_t, typename Scheduler::sender_t>
 		, branch_all::BranchChildOp<OpState<SuffixReceiver, Scheduler, SourceSender, MonadicFunction>, SourceTag{}, SourceSender>
 		, branch_all::BranchChildOp<OpState<SuffixReceiver, Scheduler, SourceSender, MonadicFunction>, DependentTag{}, std::invoke_result_t<MonadicFunction, SplitNodeSender<OpState<SuffixReceiver, Scheduler, SourceSender, MonadicFunction>, SourceSender>>>
 	{	
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<SuffixReceiver>;
+		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using SourceSenderT = SourceSender;
 		using DependentSender = std::invoke_result_t<MonadicFunction, SplitNodeSender<OpState, SourceSender>>;
 		

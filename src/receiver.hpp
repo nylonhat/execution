@@ -16,24 +16,24 @@ namespace ex::concepts::set_value_cpo {
     template<class... Cont>
     struct FunctionObject {
         template<IsReceiver Recvr, class... Args>
-			requires requires(Recvr recvr, Cont&... cont, Args... args){{recvr.template set_value<Cont...>(cont..., args...)} -> std::same_as<void>;}
-			&& (!requires(Recvr recvr, Cont&... cont, Args... args){{set_value<Cont...>(recvr, cont..., args...)} -> std::same_as<void>;})
-        constexpr static auto operator()(Recvr recvr, Cont&...cont, Args... args) {
-            return recvr.template set_value<Cont...>(cont..., args...);
+			requires requires(Recvr& recvr, Cont&... cont, Args... args){{recvr.template set_value<Cont...>(cont..., args...)} -> std::same_as<void>;}
+			&& (!requires(Recvr& recvr, Cont&... cont, Args... args){{set_value<Cont...>(recvr, cont..., args...)} -> std::same_as<void>;})
+        constexpr static auto operator()(Recvr& recvr, Cont&...cont, Args... args) {
+            [[gnu::musttail]] return recvr.template set_value<Cont...>(cont..., args...);
         }
 
         template<IsReceiver Recvr, class... Args>
-			requires requires(Recvr recvr, Cont&... cont, Args... args){{set_value<Cont...>(recvr, cont..., args...)} -> std::same_as<void>;}
-			&& (!requires(Recvr recvr, Cont&... cont, Args... args){{recvr.template set_value<Cont...>(cont..., args...)} -> std::same_as<void>;})
-        constexpr static auto operator()(Recvr recvr, Cont&...cont, Args... args) {
-            return set_value<Recvr, Cont...>(recvr, cont..., args...);
+			requires requires(Recvr& recvr, Cont&... cont, Args... args){{set_value<Cont...>(recvr, cont..., args...)} -> std::same_as<void>;}
+			&& (!requires(Recvr& recvr, Cont&... cont, Args... args){{recvr.template set_value<Cont...>(cont..., args...)} -> std::same_as<void>;})
+        constexpr static auto operator()(Recvr& recvr, Cont&...cont, Args... args) {
+            [[gnu::musttail]] return set_value<Recvr, Cont...>(recvr, cont..., args...);
         }
 
         template<IsReceiver Recvr, class... Args>
-			requires requires(Recvr recvr, Cont&... cont, Args... args){{recvr.template set_value<Cont...>(cont..., args...)} -> std::same_as<void>;}
-			&& requires(Recvr recvr, Cont&... cont, Args... args){{set_value<Cont...>(recvr, cont..., args...)} -> std::same_as<void>;}
-        constexpr static auto operator()(Recvr recvr, Cont&...cont, Args... args) {
-			return recvr.template set_value<Cont...>(cont..., args...);
+			requires requires(Recvr& recvr, Cont&... cont, Args... args){{recvr.template set_value<Cont...>(cont..., args...)} -> std::same_as<void>;}
+			&& requires(Recvr& recvr, Cont&... cont, Args... args){{set_value<Cont...>(recvr, cont..., args...)} -> std::same_as<void>;}
+        constexpr static auto operator()(Recvr& recvr, Cont&...cont, Args... args) {
+			[[gnu::musttail]] return recvr.template set_value<Cont...>(cont..., args...);
         }
 		
             
@@ -48,24 +48,24 @@ namespace ex::concepts::set_error_cpo {
     struct FunctionObject {
 
         template<IsReceiver Recvr, class... Args>
-		requires requires(Recvr recvr, Cont&... cont, Args... args){{recvr.template set_error<Cont...>(cont..., args...)} -> std::same_as<void>;}
-			&& (!requires(Recvr recvr, Cont&... cont, Args... args){{set_error<Cont...>(recvr, cont..., args...)} -> std::same_as<void>;})
-        constexpr static auto operator()(Recvr recvr, Cont&...cont, Args... args) {
-            return recvr.template set_error<Cont...>(cont..., args...);
+		requires requires(Recvr& recvr, Cont&... cont, Args... args){{recvr.template set_error<Cont...>(cont..., args...)} -> std::same_as<void>;}
+			&& (!requires(Recvr& recvr, Cont&... cont, Args... args){{set_error<Cont...>(recvr, cont..., args...)} -> std::same_as<void>;})
+        constexpr static auto operator()(Recvr& recvr, Cont&...cont, Args... args) {
+            [[gnu::musttail]] return recvr.template set_error<Cont...>(cont..., args...);
         }
 
         template<IsReceiver Recvr, class... Args>
-		requires requires(Recvr recvr, Cont&... cont, Args... args){{set_error<Cont...>(recvr, cont..., args...)} -> std::same_as<void>;}
-			&& (!requires(Recvr recvr, Cont&... cont, Args... args){{recvr.template set_error<Cont...>(cont..., args...)} -> std::same_as<void>;})
+		requires requires(Recvr& recvr, Cont&... cont, Args... args){{set_error<Cont...>(recvr, cont..., args...)} -> std::same_as<void>;}
+			&& (!requires(Recvr& recvr, Cont&... cont, Args... args){{recvr.template set_error<Cont...>(cont..., args...)} -> std::same_as<void>;})
         constexpr static auto operator()(Recvr recvr, Cont&...cont, Args... args) {
-            return set_error<Recvr, Cont...>(recvr, cont..., args...);
+            [[gnu::musttail]] return set_error<Recvr, Cont...>(recvr, cont..., args...);
         }
 
         template<IsReceiver Recvr, class... Args>
-		requires requires(Recvr recvr, Cont&... cont, Args... args){{recvr.template set_error<Cont...>(cont..., args...)} -> std::same_as<void>;}
-			&& requires(Recvr recvr, Cont&... cont, Args... args){{set_error<Cont...>(recvr, cont..., args...)} -> std::same_as<void>;}
+		requires requires(Recvr& recvr, Cont&... cont, Args... args){{recvr.template set_error<Cont...>(cont..., args...)} -> std::same_as<void>;}
+			&& requires(Recvr& recvr, Cont&... cont, Args... args){{set_error<Cont...>(recvr, cont..., args...)} -> std::same_as<void>;}
         constexpr static auto operator()(Recvr recvr, Cont&...cont, Args... args) {
-            return recvr.template set_error<Cont...>(cont..., args...);
+            [[gnu::musttail]] return recvr.template set_error<Cont...>(cont..., args...);
         }
             
     };

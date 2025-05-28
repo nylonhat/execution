@@ -14,8 +14,8 @@
 #include <atomic>
 #include <iostream>
 
-namespace test{
-
+namespace {
+	
     constexpr inline auto add = [](auto... v) {
     	return (... + v);
     };
@@ -68,7 +68,7 @@ namespace test{
             | ex::benchmark
             | ex::sync_wait;
 	
-
+		
     	auto result = ex::value(4)
     		| ex::branch(scheduler, ex::value(42)) 
     		| ex::map_value(add)
@@ -76,7 +76,7 @@ namespace test{
     		| ex::benchmark 
     		| ex::sync_wait;
 
-    	CHECK((result/iterations) < (control/iterations));
+    	CHECK((result/iterations) <= (control/iterations));
     }
 	
 

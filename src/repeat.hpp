@@ -9,12 +9,12 @@ namespace ex::algorithms::repeat_while {
 
 	template<Channel channel, IsReceiver SuffixReceiver, IsSender ChildSender1, class Predicate, class MonadicFunction>
 	struct OpState 
-		: InlinedReceiver<SuffixReceiver>
+		: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, SuffixReceiver>
 		, VariantChildOp<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>
 	{
 
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<SuffixReceiver>;
+		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using ChildOps = VariantChildOp<OpState, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>; 
 
 		[[no_unique_address]] Predicate predicate;

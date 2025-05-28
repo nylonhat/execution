@@ -16,11 +16,11 @@ namespace ex::algorithms::pure {
     
     template<Channel channel, size_t... I, class NextReceiver, class... Values>
     struct OpStateBase<channel, std::index_sequence<I...>, NextReceiver, Values...>
-        : InlinedReceiver<NextReceiver>
+        : InlinedReceiver<OpStateBase<channel, std::index_sequence<I...>, NextReceiver, Values...>, NextReceiver>
         , Leaf<I, Values>...
     {
 		using OpStateOptIn = ex::OpStateOptIn;
-        using Receiver = InlinedReceiver<NextReceiver>;
+        using Receiver = InlinedReceiver<OpStateBase, NextReceiver>;
         
         constexpr OpStateBase(NextReceiver next_receiver, Values... values)
             : Receiver{next_receiver}

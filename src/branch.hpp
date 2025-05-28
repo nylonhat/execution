@@ -19,7 +19,7 @@ namespace ex::algorithms::branch_all {
 
 	template<IsReceiver SuffixReceiver, IsScheduler Scheduler, IsSender... Senders, std::size_t... I>
 	struct OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>
-		: InlinedReceiver<SuffixReceiver>
+		: InlinedReceiver<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, SuffixReceiver>
 		, VariantChildOp<
 			OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, 
 			0, 
@@ -29,7 +29,7 @@ namespace ex::algorithms::branch_all {
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<SuffixReceiver>;
+		using Receiver = InlinedReceiver<OpStateBase, SuffixReceiver>;
 		using SchedulerSender = Scheduler::sender_t;
 		using SchedulerOp = VariantChildOp<
 			OpStateBase, 

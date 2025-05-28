@@ -10,12 +10,12 @@ namespace ex::algorithms::benchmark {
 	
 	template<IsReceiver SuffixReceiver, IsSender ChildSender>
 	struct OpState
-		: InlinedReceiver<SuffixReceiver>
+		: InlinedReceiver<OpState<SuffixReceiver, ChildSender>, SuffixReceiver>
 		, VariantChildOp<OpState<SuffixReceiver, ChildSender>, 0, ChildSender>
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<SuffixReceiver>;
+		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using ChildOp =  VariantChildOp<OpState, 0, ChildSender>;
 		Timer timer = {};
 	
@@ -26,19 +26,19 @@ namespace ex::algorithms::benchmark {
 	
 		auto start(IsOpState auto&... cont){
 			timer.start();
-			return ChildOp::template start<0>(cont...);
+			[[gnu::musttail]] return ChildOp::template start<0>(cont...);
 		}
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
         auto set_value(Cont&... cont, auto...){
 			timer.stop();
-			return ex::set_value<Cont...>(this->get_receiver(), cont..., timer.count());
+			[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., timer.count());
         }
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
         auto set_error(Cont&... cont, auto...){
 			timer.stop();
-			return ex::set_error<Cont...>(this->get_receiver(), cont..., timer.count());
+			[[gnu::musttail]] return ex::set_error<Cont...>(this->get_receiver(), cont..., timer.count());
         }
 
 	};

@@ -9,11 +9,11 @@ namespace ex::algorithms::map {
 	
 	template<Channel channel, class SuffixReceiver, IsSender ChildSender, class Function>
 	struct OpState
-		: InlinedReceiver<SuffixReceiver>
+		: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender, Function>, SuffixReceiver>
 		, VariantChildOp<OpState<channel, SuffixReceiver, ChildSender, Function>, 0, ChildSender> 
 	{ 
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<SuffixReceiver>;
+		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using ChildOp = VariantChildOp<OpState, 0, ChildSender>;
 		
 		[[no_unique_address]] Function function;

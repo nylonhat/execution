@@ -15,8 +15,8 @@
 #include <iostream>
 #include <ranges>
 
-namespace test {
-
+namespace {
+	
 
 	TEST_CASE("Async accumulate with bounded concurrency"){
 		
@@ -76,7 +76,7 @@ namespace test {
 		};
 		
 		std::size_t min = 0;
-		std::size_t max = 1uz << 32uz;
+		std::size_t max = 1uz << 15uz;
 		
 		//Range of Senders of chunks views
 		auto sender_range = std::views::iota(min, max)

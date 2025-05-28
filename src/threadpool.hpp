@@ -42,11 +42,11 @@ namespace ex {
 		
 		template<class Receiver>
 		struct OpState 
-			: ex::InlinedReceiver<Receiver>
+			: ex::InlinedReceiver<OpState<Receiver>, Receiver>
 			, ex::LoopbackChildOp<OpState<Receiver>>
 		{
 			using OpStateOptIn = ex::OpStateOptIn;
-			using InlinedReceiver = ex::InlinedReceiver<Receiver>;
+			using InlinedReceiver = ex::InlinedReceiver<OpState, Receiver>;
 			using Loopback = ex::LoopbackChildOp<OpState>;
 
 			ExecutionResource* execution_resource = nullptr;
@@ -59,24 +59,24 @@ namespace ex {
 			
 			void start(){
 				if(execution_resource->try_schedule(*this)){
-					return ex::start(); 
+					[[gnu::musttail]] return ex::start(); 
 				}
 
-				return ex::set_value<>(this->get_receiver());
+				[[gnu::musttail]] return ex::set_value<>(this->get_receiver());
 			}
 			
 			template<class ContFirst, class... Cont>
 			void start(ContFirst& cont_first, Cont&... cont){
 				if(execution_resource->try_schedule(*this)){
-					return ex::start(cont_first, cont...); 
+					[[gnu::musttail]] return ex::start(cont_first, cont...); 
 				}
 
-				return ex::start(cont_first, Loopback::get(), cont...);
+				[[gnu::musttail]] return ex::start(cont_first, Loopback::get(), cont...);
 			}
 			
 			template<class... Cont>
 			void loopback(Cont&... cont){
-				return ex::set_value<Cont...>(this->get_receiver(), cont...);
+				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont...);
 			}
 			
 		};

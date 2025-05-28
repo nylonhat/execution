@@ -11,11 +11,11 @@ namespace ex {
 	
 		template<class NextReceiver>
 		struct OpState 
-			: ex::InlinedReceiver<NextReceiver>
+			: ex::InlinedReceiver<OpState<NextReceiver>, NextReceiver>
 			, ex::LoopbackChildOp<OpState<NextReceiver>>
 		{
 			using OpStateOptIn = ex::OpStateOptIn;
-			using Receiver = ex::InlinedReceiver<NextReceiver>;
+			using Receiver = ex::InlinedReceiver<OpState, NextReceiver>;
 			using Loopback = ex::LoopbackChildOp<OpState>;
 
 
@@ -25,17 +25,17 @@ namespace ex {
 
 			
 			void start(){
-				return ex::set_value<>(this->get_receiver());
+				[[gnu::musttail]] return ex::set_value<>(this->get_receiver());
 			}
 
 			template<class ContFirst, class... Cont>
 			void start(ContFirst& cont_first, Cont&... cont){
-				return ex::start(cont_first, Loopback::get(), cont...);
+				[[gnu::musttail]] return ex::start(cont_first, Loopback::get(), cont...);
 			}
 			
 			template<class... Cont>
 			void loopback(Cont&... cont){
-				return ex::set_value<Cont...>(this->get_receiver(), cont...);
+				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont...);
 			}
 			
 		};

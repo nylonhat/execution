@@ -35,19 +35,19 @@ namespace ex::concepts::start_cpo {
         template<IsOpState Op, IsOpState... Cont>
         requires HasMember<Op, Cont...>
         constexpr static auto operator()(Op& op, Cont&...cont){
-            return op.start(cont...);
+            [[gnu::musttail]] return op.start(cont...);
         }
 
         template<IsOpState Op, IsOpState... Cont>
         requires HasFree<Op, Cont...>
         constexpr static auto operator()(Op& op, Cont&...cont){
-            return start(op, cont...);
+            [[gnu::musttail]] return start(op, cont...);
         }
 
         template<IsOpState Op, IsOpState... Cont>
         requires HasAll<Op, Cont...>
         constexpr static auto operator()(Op& op, Cont&...cont){
-            return op.start(cont...);
+            [[gnu::musttail]] return op.start(cont...);
         }
 
     };

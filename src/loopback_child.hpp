@@ -11,7 +11,7 @@ namespace ex {
         template<class... Cont>
         auto start(Cont&... cont){
 			auto* parent = static_cast<ParentOp*>(this);
-            return parent->loopback(cont...);
+            [[gnu::musttail]] return parent->loopback(cont...);
         }
 		
 		auto& get(){

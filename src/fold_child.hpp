@@ -22,12 +22,12 @@ namespace ex::algorithms::fold {
 
             template<class... Cont, class... Arg>
             auto set_value(Cont&... cont, Arg... arg){
-                return parent_op->template set_value<Tag, Cont...>(ticket, cont..., arg...);
+                [[gnu::musttail]] return parent_op->template set_value<Tag, Cont...>(ticket, cont..., arg...);
             }
 
             template<class... Cont, class... Arg>
             auto set_error(Cont&... cont, Arg... arg){
-                return parent_op->template set_error<Tag, Cont...>(ticket, cont..., arg...);
+                [[gnu::musttail]] return parent_op->template set_error<Tag, Cont...>(ticket, cont..., arg...);
             }
           
         };

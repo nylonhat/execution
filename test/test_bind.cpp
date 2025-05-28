@@ -22,13 +22,13 @@ namespace{
 
     
     TEST_CASE("bind stress"){
-    	auto result = ex::value(5, 7) > ex::add >= pure_stress<20> > ex::identity | ex::sync_wait;
+    	auto result = (ex::value(5, 7) > ex::add >= pure_stress<20> > ex::identity) | ex::sync_wait;
     	CHECK(result == 12);
     }
 
     
     TEST_CASE("monadic"){
-    	auto result = ex::value(42) > ex::value >= ex::identity | ex::sync_wait;
+    	auto result = (ex::value(42) > ex::value >= ex::identity) | ex::sync_wait;
     	CHECK(result == 42);
     }
 

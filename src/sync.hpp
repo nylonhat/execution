@@ -27,7 +27,7 @@ namespace ex::algorithms::sync_wait {
 
         template<class... Cont>
         auto start(Cont&... cont){
-            return ChildOp::template start<0>(cont...);
+            [[gnu::musttail]] return ChildOp::template start<0>(cont...);
         }
 
         template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>

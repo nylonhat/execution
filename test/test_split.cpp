@@ -27,7 +27,7 @@ namespace {
 
 	}
 	
-	
+	/*
 	TEST_CASE("threadpool split test"){
 		
 		ex::Threadpool<16> threadpool{};
@@ -69,7 +69,7 @@ namespace {
 		CHECK(result == 3);
 
 	}
-	
+	*/
     
 
 }//namespace

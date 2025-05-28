@@ -6,13 +6,13 @@
 
 namespace ex {
 
-    template<class Receiver>
+    template<class Derived, class Receiver>
     concept InlinableReceiver = requires(){
-        {Receiver::make_for_child(nullptr)} -> std::same_as<Receiver>;
+        typename Receiver::template InlinedReceiver<Derived>;
     };
 
     
-    template<class Receiver>
+    template<class Derived, class Receiver>
     struct InlinedReceiver {
         [[no_unique_address]] Receiver receiver;
         
@@ -25,14 +25,14 @@ namespace ex {
         }
     };
     
-    template<class Receiver>
-        requires InlinableReceiver<Receiver>
-    struct InlinedReceiver<Receiver> {
-        InlinedReceiver(Receiver receiver){}
+    template<class Derived, class Receiver>
+        requires InlinableReceiver<Derived, Receiver>
+    struct InlinedReceiver<Derived, Receiver> 
+		: Receiver::template InlinedReceiver<Derived>
+	{
+        
+		InlinedReceiver(Receiver){}
 
-        Receiver get_receiver(this auto&& self){
-            return Receiver::make_for_child(std::addressof(self));
-        }
     };
 
 }

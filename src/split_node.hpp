@@ -31,10 +31,10 @@ namespace ex::algorithms::split {
 	
     template<class SuffixReceiver, class SplitOp>
     struct SplitNodeOp 
-		: InlinedReceiver<SuffixReceiver>
+		: InlinedReceiver<SplitNodeOp<SuffixReceiver, SplitOp>, SuffixReceiver>
 		, LoopbackChildOp<SplitNodeOp<SuffixReceiver, SplitOp>>
 	{
-		using Receiver = InlinedReceiver<SuffixReceiver>;
+		using Receiver = InlinedReceiver<SplitNodeOp, SuffixReceiver>;
 		using Loopback = LoopbackChildOp<SplitNodeOp<SuffixReceiver, SplitOp>>;
 		
 		SplitOp* split_op_ptr = nullptr;

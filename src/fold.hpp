@@ -17,13 +17,13 @@ namespace ex::algorithms::fold {
 	template<std::size_t Size, IsReceiver SuffixReceiver, IsScheduler Scheduler, std::ranges::range SenderRange, class MonadicFunction, class Init, class Function>
 		requires (Size > 1)
 	struct OpState
-		: InlinedReceiver<SuffixReceiver>
+		: InlinedReceiver<OpState<Size, SuffixReceiver, Scheduler, SenderRange, MonadicFunction, Init, Function>, SuffixReceiver>
 		, VariantChildOp<OpState<Size, SuffixReceiver, Scheduler, SenderRange, MonadicFunction, Init, Function>, 0, typename Scheduler::sender_t, std::ranges::range_value_t<SenderRange>>
 		, FoldChildOp<Size, OpState<Size, SuffixReceiver, Scheduler, SenderRange, MonadicFunction, Init, Function>, ChildTag{}, ex::apply_values_t<MonadicFunction, std::ranges::range_value_t<SenderRange>>>
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<SuffixReceiver>;
+		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
 		using SchedulerSender = Scheduler::sender_t;
 		using RangeSender = std::ranges::range_value_t<SenderRange>;
 		using LoopOp = VariantChildOp<OpState, 0, SchedulerSender, RangeSender>;
@@ -71,10 +71,10 @@ namespace ex::algorithms::fold {
 		template<class... Cont>
 		void start(Cont&... cont){
 			if(iter == sentinel){
-				return ex::set_value<Cont...>(this->get_receiver(), cont..., folded_value);
+				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., folded_value);
 			}
 			
-			return ex::start(LoopOp::template get<0>(), cont...);
+			[[gnu::musttail]] return ex::start(LoopOp::template get<0>(), cont...);
 			// static_assert(sizeof...(cont) == 0);
 			// return set_value<0, 0, Cont...>(cont...);
 		}
@@ -91,11 +91,11 @@ namespace ex::algorithms::fold {
 				auto old_tag = ticket_ring.at((head_now-1) % Size).tag.fetch_add(2);
 				
 				if (old_tag == head_now){
-					return ex::start(cont...);
+					[[gnu::musttail]] return ex::start(cont...);
 				}
 
 				if constexpr(!first_same_as<typename ChildOps::ChildOp, Cont...>){
-					return finish(cont...);
+					[[gnu::musttail]] return finish(cont...);
 				}
 			}
 			
@@ -103,17 +103,17 @@ namespace ex::algorithms::fold {
 			auto old_tag = ticket_ring.at(head_now % Size).tag.fetch_add(1);
 
 			if(old_tag == head_now){
-				return produce(cont...);
+				[[gnu::musttail]] return produce(cont...);
 			}
 			
 			//Wait
-			return ex::start(cont...);
+			[[gnu::musttail]] return ex::start(cont...);
 		}
 		
 		template<class... Cont>
 		void produce(Cont&... cont){
 			auto& range_op = LoopOp::template construct_from<1>(*(iter++));
-			return ex::start(range_op, cont...);
+			[[gnu::musttail]] return ex::start(range_op, cont...);
 		}
 		
 		
@@ -132,7 +132,7 @@ namespace ex::algorithms::fold {
 			
 			auto& child_op = ChildOps::construct_from_sender_at(monadic_function(args...), ticket);
 			auto& scheduler_op = LoopOp::template construct_from<0>(scheduler.sender());
-			return ex::start(scheduler_op, child_op, cont...);
+			[[gnu::musttail]] return ex::start(scheduler_op, child_op, cont...);
 		}
 		
 
@@ -151,17 +151,17 @@ namespace ex::algorithms::fold {
 			if constexpr((!first_same_as<typename LoopOp::template VariantOp<0>::Loopback, Cont...>) && (!first_same_as<typename ChildOps::ChildOp, Cont...>)){
 				//Wake up producer
 				if(old_tag == old_tail + 2){
-					return produce(cont...);
+					[[gnu::musttail]] return produce(cont...);
 				}
 			
 			
 				if(old_tag == old_tail + 3){
-					return finish(cont...);
+					[[gnu::musttail]] return finish(cont...);
 				}
 
 			}
 			
-			return ex::start(cont...);
+			[[gnu::musttail]] return ex::start(cont...);
         }
 		
 		template<class... Cont>
@@ -173,7 +173,7 @@ namespace ex::algorithms::fold {
 				folded_value = function(value, folded_value);
 			}
 			
-			return ex::set_value<Cont...>(this->get_receiver(), cont..., folded_value);
+			[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., folded_value);
 		}
 		
 	};

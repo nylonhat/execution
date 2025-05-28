@@ -11,7 +11,7 @@ namespace {
     };
 
     TEST_CASE("map times 2"){
-    	auto result = ex::value(42) > times_two | ex::sync_wait;
+    	auto result = (ex::value(42) > times_two) | ex::sync_wait;
     	CHECK(result == 84);
     }
 
