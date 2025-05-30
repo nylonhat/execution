@@ -56,30 +56,30 @@ namespace ex::algorithms::split {
 			
 			do {
 				if(old_head == done_state){
-					return ex::set_value<Cont...>(this->get_receiver(), cont..., split_op_ptr->get_source_result());
+					[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., split_op_ptr->get_source_result());
 				}
 				
 				node_op.next_node_ptr = static_cast<NodeOp*>(old_head);
 				
-			} while (head.compare_exchange_weak(old_head, &node_op));
+			} while (!head.compare_exchange_weak(old_head, &node_op));
 			
 			//successfully added to waiting list
-			return ex::start(cont...);
+			[[gnu::musttail]] return ex::start(cont...);
 		}
 		
 		void resume(){
 			if(node_op.next_node_ptr == nullptr){
 				//No more waiters
-				return ex::start(Loopback::get());
+				[[gnu::musttail]] return ex::start(Loopback::get());
 			}
 			
 			//schedule next loop and start self
-			return ex::start(split_op_ptr->get_scheduler_op(), Loopback::get());
+			[[gnu::musttail]] return ex::start(split_op_ptr->get_scheduler_op(), Loopback::get());
 		}
 		
 		template<class... Cont>
 		void loopback(Cont&... cont){
-			ex::set_value<Cont...>(this->get_receiver(), cont..., split_op_ptr->get_source_result());
+			[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., split_op_ptr->get_source_result());
 		}
         
     };

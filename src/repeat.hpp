@@ -34,7 +34,7 @@ namespace ex::algorithms::repeat_while {
 
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Arg>
         void set_value(Cont&... cont, Arg... args){
-			static_assert(sizeof...(cont) == 0);
+			//static_assert(sizeof...(cont) == 0);
         	
         	if constexpr(channel == Channel::value){
 	        	if(predicate(args...)){

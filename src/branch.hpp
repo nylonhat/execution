@@ -166,13 +166,13 @@ namespace ex::algorithms::branch {
 	struct FunctionObject {
 		
 		template<IsScheduler Scheduler, IsSender Sender1, IsSender Sender2>
-		auto operator()(this auto&& self, Scheduler scheduler, Sender1 sender1, Sender2 sender2){
+		static auto operator()(Scheduler scheduler, Sender1 sender1, Sender2 sender2){
 			return ex::branch_all(scheduler, sender1, sender2);
 		}
 
 		
 		template<IsScheduler Scheduler, IsSender Sender2>
-		auto operator()(this auto&& self, Scheduler scheduler, Sender2 sender2){
+		static auto operator()(Scheduler scheduler, Sender2 sender2){
 			return [scheduler, sender2]<IsSender Sender1>(Sender1 sender1){
 				return ex::branch_all(scheduler, sender1, sender2);
 			};

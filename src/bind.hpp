@@ -104,12 +104,12 @@ namespace ex::algorithms::bind {
 	template<Channel channel>
 	struct Function {
 		template<IsSender Sender1, class MonadicFunction>
-		constexpr auto operator()(this auto&&, Sender1 sender1, MonadicFunction monadic_function){
+		static auto operator()(Sender1 sender1, MonadicFunction monadic_function){
 			return Sender<channel, Sender1, MonadicFunction>{sender1, monadic_function};
 		}
 
 		template<class MonadicFunction>
-		constexpr auto operator()(this auto&&, MonadicFunction monadic_function){
+		static auto operator()(MonadicFunction monadic_function){
 			return [=]<IsSender Sender1>(Sender1 sender1){
 				return Sender<channel, Sender1, MonadicFunction>{sender1, monadic_function};
 			};

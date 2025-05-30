@@ -25,7 +25,6 @@ namespace ex::algorithms::split {
 	{	
 		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
-		using SourceSenderT = SourceSender;
 		using DependentSender = std::invoke_result_t<MonadicFunction, SplitNodeSender<OpState, SourceSender>>;
 		
 		using SchedulerOp = VariantChildOp<OpState, 0, typename Scheduler::sender_t, typename Scheduler::sender_t>;
@@ -53,7 +52,7 @@ namespace ex::algorithms::split {
 			auto& scheduler_op = SchedulerOp::template get<0>();
 			auto& source_sender = SourceOp::get_sender();
 			auto& source_op = SourceOp::construct_from(source_sender);
-			ex::start(scheduler_op, source_op, cont...);
+			[[gnu::musttail]] return ex::start(scheduler_op, source_op, cont...);
 		}
 		
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
@@ -61,7 +60,7 @@ namespace ex::algorithms::split {
         auto set_value(Cont&... cont){
 			auto dependent_sender = monadic_function(SplitNodeSender<OpState, SourceSender>{this});
 			auto& dependent_op = DependentOp::construct_from(dependent_sender);
-			ex::start(dependent_op, cont...);
+			[[gnu::musttail]] return ex::start(dependent_op, cont...);
 		}
 		
 		auto& get_scheduler_op(){
@@ -77,7 +76,17 @@ namespace ex::algorithms::split {
         auto set_value(){
 			auto& node_op = *current_node_ptr;
 			current_node_ptr = current_node_ptr->next_node_ptr;
-			return ex::start(node_op);
+			[[gnu::musttail]] return ex::start(node_op);
+		}
+		
+		template<SourceTag tag, class... Cont, class... Args>
+			requires first_same_as<typename SchedulerOp::template VariantOp<0>::Loopback, Cont...> 
+		auto set_value(Cont&... cont, Args... args){
+			//Scheduled syncronously
+			SourceOp::construct_result(args...);
+			counter.fetch_sub(1);
+			head.store(this);
+			[[gnu::musttail]] return ex::start(cont...);
 		}
 		
 		
@@ -85,28 +94,41 @@ namespace ex::algorithms::split {
 		auto set_value(Cont&... cont, Args... args){
 			//Set done and wake first type erased waiter
 			SourceOp::construct_result(args...);
-			
+			auto* old_head = head.exchange(this);
+				
 			auto old_counter = counter.fetch_sub(1);
-			
+			//Danger line!! Operation state may no longer exist below here!!
+				
 			if(old_counter == 0){
 				//Last to finish; no waiter guaranteed
-				return ex::set_value<Cont...>(this->get_receiver(), cont..., DependentOp::get_result());
+				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., DependentOp::get_result());
 			}
 			
-			auto* old_head = head.exchange(this);
+			//Caution!! Operation state may no longer exist after this point.
+			//Do not access anything not local to function if there are no waiters!!
 			
 			if(old_head == nullptr){
 				//No waiters
-				return ex::start(cont...);
+				[[gnu::musttail]] return ex::start(cont...);
 			}
 			
 			//There are waiters to wakeup
+			//Safe to access operation state members
 			current_node_ptr = static_cast<NodeOp*>(old_head);
 			auto& node_op = *current_node_ptr;
 			current_node_ptr = current_node_ptr->next_node_ptr;
-			return ex::start(cont..., node_op);
+			[[gnu::musttail]] return ex::start(cont..., node_op);
 			
 		}
+		
+		template<DependentTag tag, class... Cont, class... Args>
+			requires first_same_as<typename SchedulerOp::template VariantOp<1>::Loopback, Cont...> 
+		auto set_value(Cont&... cont, Args... args){
+			DependentOp::construct_result(args...);
+			counter.fetch_sub(1);
+			[[gnu::musttail]] return ex::start(cont...);
+		}
+		
 		
 		template<DependentTag tag, class... Cont, class... Args>
 		auto set_value(Cont&... cont, Args... args){
@@ -115,10 +137,10 @@ namespace ex::algorithms::split {
 			auto old_counter = counter.fetch_sub(1);
 			
 			if(old_counter == 0){
-				return ex::set_value<Cont...>(this->get_receiver(), cont..., DependentOp::get_result());
+				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., DependentOp::get_result());
 			}
 			
-			return ex::start(cont...);
+			[[gnu::musttail]] return ex::start(cont...);
 		}
 
 
@@ -146,6 +168,13 @@ namespace ex::algorithms::split {
 		static auto operator()(IsScheduler auto scheduler, IsSender auto source_sender, auto monadic_function){
 			return Sender{scheduler, source_sender, monadic_function};
 		}
+		
+		static auto operator()(IsScheduler auto scheduler, auto monadic_function){
+			return [=](IsSender auto source_sender){
+				return Sender{scheduler, source_sender, monadic_function};
+			};
+		}
+		
 		
 	};
 
