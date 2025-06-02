@@ -10,21 +10,23 @@ namespace ex::algorithms::split {
 	struct NodeOp {
 		using OpStateOptIn = ex::OpStateOptIn;
 		
-		void* type_ptr = nullptr;
-		void(*resume_ptr)(void*) = [](void*){};
+		void(*resume_ptr)(NodeOp*) = [](NodeOp*){};
 		NodeOp* next_node_ptr = nullptr;
 		
 		template<class O>
 		NodeOp(O& op)
-			: type_ptr{std::addressof(op)}
-			, resume_ptr{[](void* type_ptr){
+			: resume_ptr{[](NodeOp* type_ptr){
 				O& op = *static_cast<O*>(type_ptr);
-				return op.resume();
+				[[gnu::musttail]] return op.resume();
 			}} 
 		{}
 		
+		auto& get(){
+			return *this;
+		}
+		
 		void start(){
-			return resume_ptr(type_ptr);
+			[[gnu::musttail]] return resume_ptr(this);
 		}
 		
 	};
@@ -33,17 +35,18 @@ namespace ex::algorithms::split {
     struct SplitNodeOp 
 		: InlinedReceiver<SplitNodeOp<SuffixReceiver, SplitOp>, SuffixReceiver>
 		, LoopbackChildOp<SplitNodeOp<SuffixReceiver, SplitOp>>
+		, NodeOp
 	{
+		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<SplitNodeOp, SuffixReceiver>;
 		using Loopback = LoopbackChildOp<SplitNodeOp<SuffixReceiver, SplitOp>>;
 		
 		SplitOp* split_op_ptr = nullptr;
-		NodeOp node_op;
 		
 		SplitNodeOp(SuffixReceiver suffix_receiver, SplitOp* split_op_ptr)
 			: Receiver{suffix_receiver}
+			, NodeOp{*this}
 			, split_op_ptr{split_op_ptr}
-			, node_op{*this}
 		{}
 		
 		template<class... Cont>
@@ -59,16 +62,16 @@ namespace ex::algorithms::split {
 					[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., split_op_ptr->get_source_result());
 				}
 				
-				node_op.next_node_ptr = static_cast<NodeOp*>(old_head);
+				this->next_node_ptr = static_cast<NodeOp*>(old_head);
 				
-			} while (!head.compare_exchange_weak(old_head, &node_op));
+			} while (!head.compare_exchange_weak(old_head, std::addressof(NodeOp::get())));
 			
 			//successfully added to waiting list
 			[[gnu::musttail]] return ex::start(cont...);
 		}
 		
 		void resume(){
-			if(node_op.next_node_ptr == nullptr){
+			if(this->next_node_ptr == nullptr){
 				//No more waiters
 				[[gnu::musttail]] return ex::start(Loopback::get());
 			}
