@@ -4,7 +4,8 @@
 #include "concepts.hpp"
 #include "inlined_receiver.hpp"
 
-namespace ex::algorithms::pure {
+namespace ex {
+inline namespace algorithms_pure {
     
     template<size_t I, class T>
     struct Leaf{
@@ -102,14 +103,15 @@ namespace ex::algorithms::pure {
         }
     };
 
-}//namespace ex::algorithms::pure
+}}//namespace ex::algorithms_pure
 
 namespace ex {
+	
     template<Channel channel>
-    inline constexpr auto pure = algorithms::pure::FunctionObject<channel>{};
+    inline constexpr auto pure = algorithms_pure::FunctionObject<channel>{};
     
-    inline constexpr auto value = algorithms::pure::FunctionObject<Channel::value>{};
-    inline constexpr auto error = algorithms::pure::FunctionObject<Channel::error>{};
+    inline constexpr auto value = algorithms_pure::FunctionObject<Channel::value>{};
+    inline constexpr auto error = algorithms_pure::FunctionObject<Channel::error>{};
 
 }//namespace ex
 

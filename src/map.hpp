@@ -5,7 +5,8 @@
 #include "inlined_receiver.hpp"
 #include "variant_child.hpp"
 
-namespace ex::algorithms::map {
+namespace ex {
+inline namespace algorithms_map {
 	
 	template<Channel channel, class SuffixReceiver, IsSender ChildSender, class Function>
 	struct OpState
@@ -95,19 +96,21 @@ namespace ex::algorithms::map {
 		}
 	};
 
-}//namespace map
+}}//namespace ex::algorithms_map
 
 namespace ex {
 
-	inline constexpr auto map_value = algorithms::map::FunctionObject<Channel::value>{};
-	inline constexpr auto map_error = algorithms::map::FunctionObject<Channel::error>{};
+	inline constexpr auto map_value = algorithms_map::FunctionObject<Channel::value>{};
+	inline constexpr auto map_error = algorithms_map::FunctionObject<Channel::error>{};
 
 }//namespace ex
 
+namespace ex {
 
-constexpr auto operator > (ex::IsSender auto sender, auto function){
-    return ex::map_value(sender, function);
-}
+	constexpr auto operator > (ex::IsSender auto sender, auto function){
+		return ex::map_value(sender, function);
+	}
 
+}//namespace ex
 
 #endif//MAP_H

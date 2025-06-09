@@ -72,11 +72,14 @@ namespace ex {
 
 	template<class T, class... Pack>
 	concept first_same_as = std::same_as<Pack...[0], T>;
+	
+	
+	constexpr auto operator | (ex::IsSender auto value, auto func){
+		return func(value);
+	}
     
 }//namespace ex
 
-constexpr auto operator | (ex::IsSender auto value, auto func){
-	return func(value);
-}
+
 
 #endif//CONCEPTS_HPP

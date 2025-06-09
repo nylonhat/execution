@@ -6,9 +6,9 @@
 
 namespace ex {
 
-    template<class Derived, class Receiver>
-    concept InlinableReceiver = requires(){
-        typename Receiver::template InlinedReceiver<Derived>;
+    template<class Receiver, class ChildOp>
+    concept InlinableReceiver = requires(ChildOp* op){
+        {Receiver::make_for_child(op)} -> std::same_as<Receiver>;
     };
 
     
@@ -24,15 +24,16 @@ namespace ex {
             return receiver;
         }
     };
-    
-    template<class Derived, class Receiver>
-        requires InlinableReceiver<Derived, Receiver>
-    struct InlinedReceiver<Derived, Receiver> 
-		: Receiver::template InlinedReceiver<Derived>
-	{
-        
-		InlinedReceiver(Receiver){}
+	
+	
+	template<class Derived, class Receiver>
+        requires InlinableReceiver<Receiver, Derived>
+    struct InlinedReceiver<Derived, Receiver> {
+        InlinedReceiver(Receiver receiver){}
 
+        Receiver get_receiver(){
+            return Receiver::make_for_child(static_cast<Derived*>(this));
+        }
     };
 
 }
