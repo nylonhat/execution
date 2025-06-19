@@ -2,6 +2,7 @@
 #define CONDITIONAL_HPP
 
 #include "concepts.hpp"
+#include "signature.hpp"
 #include "inlined_receiver.hpp"
 #include "child_variant.hpp"
 

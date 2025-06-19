@@ -2,6 +2,7 @@
 #define SPLIT_NODE_HPP
 
 #include "concepts.hpp"
+#include "signature.hpp"
 #include "inlined_receiver.hpp"
 #include "loopback_child.hpp"
 

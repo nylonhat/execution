@@ -46,8 +46,8 @@ namespace ex::algorithms::benchmark {
 	template<IsSender ChildSender>
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
-		using value_t = std::tuple<std::size_t>;
-		using error_t = std::tuple<std::size_t>;
+		using value_t = std::tuple<std::tuple<std::size_t>>;
+		using error_t = std::tuple<std::tuple<std::size_t>>;
 		
 		ChildSender child_sender;
 

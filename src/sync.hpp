@@ -4,6 +4,7 @@
 #include <semaphore>
 #include <print>
 #include "concepts.hpp"
+#include "signature.hpp"
 #include "child_variant.hpp"
 
 namespace ex::algorithms::sync_wait {
@@ -14,7 +15,7 @@ namespace ex::algorithms::sync_wait {
     {
 		using OpStateOptIn = ex::OpStateOptIn;
         using ChildOp = ChildVariant<OpState, 0, ChildSender>;
-        using Result = single_value_t<ChildSender>;
+        using Result = single_return_t<ChildSender>;
 
         Result* result;
         std::binary_semaphore* flag;
@@ -52,7 +53,7 @@ namespace ex::algorithms::sync_wait {
 namespace ex {
 
     inline constexpr auto sync_wait = []<IsSender ChildSender>(ChildSender child_sender){
-        using Result = single_value_t<ChildSender>;
+        using Result = single_return_t<ChildSender>;
         Result result;
         std::binary_semaphore flag{0};
     

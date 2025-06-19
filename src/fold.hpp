@@ -20,7 +20,8 @@ inline namespace fold_algorithm {
 	struct Op
 		: InlinedReceiver<Op<Size, NextRx, Sched, SndrRng, SndrFn, Init, FoldFn>, NextRx>
 		, ChildVariant<Op<Size, NextRx, Sched, SndrRng, SndrFn, Init, FoldFn>, 0, typename Sched::sender_t, std::ranges::range_value_t<SndrRng>>
-		, ChildArray<Size, Op<Size, NextRx, Sched, SndrRng, SndrFn, Init, FoldFn>, ChildTag{}, ex::apply_values_t<SndrFn, std::ranges::range_value_t<SndrRng>>>
+		, ChildArray<Size, Op<Size, NextRx, Sched, SndrRng, SndrFn, Init, FoldFn>, ChildTag{}, sender_of_apply_signature_t<SndrFn, channel_sig_t<Channel::value, std::ranges::range_value_t<SndrRng>>>>
+		
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
@@ -28,7 +29,7 @@ inline namespace fold_algorithm {
 		using SchedulerSender = Sched::sender_t;
 		using RangeSender = std::ranges::range_value_t<SndrRng>;
 		using LoopOp = ChildVariant<Op, 0, SchedulerSender, RangeSender>;
-		using ChildSender = ex::apply_values_t<SndrFn, RangeSender>;
+		using ChildSender = sender_of_apply_signature_t<SndrFn, channel_sig_t<Channel::value, RangeSender>>;
 		using ChildOps = ChildArray<Size, Op, ChildTag{}, ChildSender>;
 		
 		Sched scheduler;
@@ -184,7 +185,7 @@ inline namespace fold_algorithm {
 		requires (Size > 1)	
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
-		using value_t = std::tuple<Init>;
+		using value_t = std::tuple<std::tuple<Init>>;
 		using error_t = std::ranges::range_value_t<SndrRng>::error_t;
 
 		Sched scheduler;

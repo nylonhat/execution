@@ -3,6 +3,7 @@
 
 #include "scheduler.hpp"
 #include "concepts.hpp"
+#include "signature.hpp"
 #include "inlined_receiver.hpp"
 #include "loopback_child.hpp"
 #include "inline_scheduler.hpp"
@@ -83,8 +84,8 @@ inline namespace executor {
 
 		struct Sender {
 			using SenderOptIn = ex::SenderOptIn;
-			using value_t = std::tuple<>;
-			using error_t = std::tuple<>;
+			using value_t = std::tuple<std::tuple<>>;
+			using error_t = std::tuple<std::tuple<>>;
 			
 
 			ExecutionResource* execution_resource = nullptr;

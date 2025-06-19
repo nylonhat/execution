@@ -4,6 +4,7 @@
 #include <atomic>
 #include "scheduler.hpp"
 #include "concepts.hpp"
+#include "signature.hpp"
 #include "inlined_receiver.hpp"
 #include "child_variant.hpp"
 #include "child_storage.hpp"

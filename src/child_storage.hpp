@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include "concepts.hpp"
+#include "signature.hpp"
 
 namespace ex {
 inline namespace details {
@@ -43,7 +44,7 @@ inline namespace details {
 
         using Sender = ChildSender;
         using ChildOp = ex::connect_t<ChildSender, Receiver>;
-        using Result = ex::single_value_t<ChildSender>;
+        using Result = single_return_t<ChildSender>;
     
         alignas(Sender) alignas(ChildOp) alignas(Result) std::array<std::byte, std::max({sizeof(Sender), sizeof(ChildOp), sizeof(Result)})> storage;
         

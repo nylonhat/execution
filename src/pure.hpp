@@ -2,6 +2,7 @@
 #define PURE_H
 
 #include "concepts.hpp"
+#include "signature.hpp"
 #include "inlined_receiver.hpp"
 
 namespace ex {
@@ -53,7 +54,7 @@ inline namespace pure_algorithm {
     template<Channel channel1, Channel channel2, class... Results>
     requires (channel1 == channel2)
     struct pure_channel<channel1, channel2, Results...>{
-        using type = std::tuple<Results...>;
+        using type = std::tuple<std::tuple<Results...>>;
     };
 
     template<Channel channel1, Channel channel2, class... Results>

@@ -2,6 +2,7 @@
 #define REPEAT_H
 
 #include "concepts.hpp"
+#include "signature.hpp"
 #include "inlined_receiver.hpp"
 #include "child_variant.hpp"
 
@@ -10,12 +11,13 @@ namespace ex::algorithms::repeat_while {
 	template<Channel channel, IsReceiver SuffixReceiver, IsSender ChildSender1, class Predicate, class MonadicFunction>
 	struct OpState 
 		: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, SuffixReceiver>
-		, ChildVariant<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>
+		, ChildVariant<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, 0, ChildSender1, sender_of_apply_signature_t<MonadicFunction, channel_sig_t<channel, ChildSender1>> >
 	{
 
 		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
-		using ChildOps = ChildVariant<OpState, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>; 
+		using ChildSender2 = sender_of_apply_signature_t<MonadicFunction, channel_sig_t<channel, ChildSender1>>;
+		using ChildOps = ChildVariant<OpState, 0, ChildSender1, ChildSender2>; 
 
 		[[no_unique_address]] Predicate predicate;
 		[[no_unique_address]] MonadicFunction monadic_function;
@@ -125,7 +127,7 @@ namespace ex::algorithms::repeat_n {
 				return sender1;
 			};
 			//                              TODO: What init value?
-			return ex::repeat_while<channel>(std::apply(pure<channel>, typename Sender1::value_t{}), loop, monadic_function);
+			return ex::repeat_while<channel>(std::apply(pure<channel>, std::get<0>(typename Sender1::value_t{}) ), loop, monadic_function);
 		}
 
 		static auto operator()(const std::size_t iterations){

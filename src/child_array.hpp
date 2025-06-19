@@ -2,6 +2,8 @@
 #define CHILD_ARRAY_HPP
 
 #include "concepts.hpp"
+#include "signature.hpp"
+
 
 namespace ex {
 inline namespace details {
@@ -34,7 +36,7 @@ inline namespace details {
         };
 
         using ChildOp = ex::connect_t<ChildSender, Receiver>;
-        using Result = ex::single_value_t<ChildSender>;
+        using Result = single_return_t<ChildSender>;
 		
 		union alignas(64) Cell {
 			std::monostate monostate = {};

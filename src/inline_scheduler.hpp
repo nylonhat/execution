@@ -44,7 +44,7 @@ inline namespace Scheduler{
 
 		struct Sender {
 			using SenderOptIn = ex::SenderOptIn;
-			using value_t = std::tuple<>;
+			using value_t = std::tuple<std::tuple<>>;
 			using error_t = std::tuple<>;
 			
 			template<class NextReceiver>

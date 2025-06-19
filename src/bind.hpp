@@ -2,6 +2,7 @@
 #define BIND_H
 
 #include "concepts.hpp"
+#include "signature.hpp"
 #include "inlined_receiver.hpp"
 #include "child_variant.hpp"
 
@@ -11,11 +12,12 @@ inline namespace bind_algorithm {
 	template<Channel channel, IsReceiver NextRx, IsSender Sender1, class SndrFn>
 	struct Op 
 		: InlinedReceiver<Op<channel, NextRx, Sender1, SndrFn>, NextRx>
-		, ChildVariant<Op<channel, NextRx, Sender1, SndrFn>, 0, Sender1, apply_channel_t<channel, SndrFn, Sender1>>
+		, ChildVariant<Op<channel, NextRx, Sender1, SndrFn>, 0, Sender1, sender_of_apply_signature_t<SndrFn, channel_sig_t<channel, Sender1>>>
 	{
 
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Sender2 = apply_channel_t<channel, SndrFn, Sender1>;
+		//using Sender2 = apply_channel_t<channel, SndrFn, Sender1>;
+		using Sender2 = sender_of_apply_signature_t<SndrFn, channel_sig_t<channel, Sender1>>;
 		using Receiver = InlinedReceiver<Op, NextRx>;
 		using ChildOps = ChildVariant<Op, 0, Sender1, Sender2>;
 
@@ -74,13 +76,19 @@ inline namespace bind_algorithm {
 	template<Channel channel1, Channel channel2, IsSender Sender1, class SndrFn>
 	requires (channel1 == channel2)
 	struct bind_channel<channel1, channel2, Sender1, SndrFn>{
-		using type = channel_t<channel1, apply_channel_t<channel1, SndrFn, Sender1>>;
+		//using type = channel_t<channel1, apply_channel_t<channel1, SndrFn, Sender1>>;
+		using Sender2 = sender_of_apply_signature_t<SndrFn, channel_sig_t<channel2, Sender1>>;
+		using type = channel_sig_t<channel2, Sender2>;
 	};
 
 	template<Channel channel1, Channel channel2, IsSender Sender1, class SndrFn>
 	requires (channel1 != channel2)
 	struct bind_channel<channel1, channel2, Sender1, SndrFn>{
-		using type = channel_t<channel1, Sender1>;
+		//using type = channel_t<channel1, Sender1>;
+		using Sig1 = channel_sig_t<channel1, Sender1>;
+		using Sender2 = sender_of_apply_signature_t<SndrFn, channel_sig_t<channel2, Sender1>>; 
+		using Sig2 = channel_sig_t<channel1, Sender2>;
+		using type = common_simple_signature_t<Sig1, Sig2>;
 	};
 
 	template<Channel channel, IsSender Sender1, class SndrFn>

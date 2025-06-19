@@ -5,6 +5,7 @@
 #include "scheduler.hpp"
 #include "child_storage.hpp"
 #include "concepts.hpp"
+#include "signature.hpp"
 #include "inlined_receiver.hpp"
 #include "child_variant.hpp"
 
@@ -114,7 +115,7 @@ inline namespace branch_all_algorithm {
 	template<IsScheduler Sched, IsSender... ChildSenders>
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
-		using value_t = values_join_t<ChildSenders...>;
+		using value_t = sig_values_join_t<ChildSenders...>;
 		using error_t = ChildSenders...[0]::error_t;
 
 		Sched scheduler;

@@ -2,6 +2,7 @@
 #define MAP_H
 
 #include "concepts.hpp"
+#include "signature.hpp"
 #include "inlined_receiver.hpp"
 #include "child_variant.hpp"
 
@@ -56,13 +57,15 @@ inline namespace map_algorithm {
 	template<Channel channel1, Channel channel2, IsSender ChildSender, class Function>
 	requires (channel1 == channel2)
 	struct map_channel<channel1, channel2, ChildSender, Function> {
-		using type = std::tuple<apply_channel_t<channel1, Function, ChildSender>>;
+		//using type = std::tuple<apply_channel_t<channel1, Function, ChildSender>>;
+		using type = signature_of_apply_t<Function, channel_sig_t<channel1, ChildSender>>;
 	};
 
 	template<Channel channel1, Channel channel2, IsSender ChildSender, class Function>
 	requires (channel1 != channel2)
 	struct map_channel<channel1, channel2, ChildSender, Function> {
-		using type = channel_t<channel1, ChildSender>;
+		//using type = channel_t<channel1, ChildSender>;
+		using type = channel_sig_t<channel1, ChildSender>;
 	};
 
 	template<Channel channel, IsSender ChildSender, class Function>
