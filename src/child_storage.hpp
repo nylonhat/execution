@@ -1,13 +1,14 @@
-#ifndef BRANCH_CHILD_H
-#define BRANCH_CHILD_H
+#ifndef CHILD_STORAGE_HPP
+#define CHILD_STORAGE_HPP
 
 #include <algorithm>
 #include "concepts.hpp"
 
-namespace ex::algorithms::branch_all {
+namespace ex {
+inline namespace details {
     
     template<class ParentOp, auto Tag, IsSingleValueSender ChildSender>
-    struct BranchChildOp {
+    struct ChildStorage {
 
         struct Receiver {
             using ReceiverOptIn = ex::ReceiverOptIn;
@@ -15,7 +16,7 @@ namespace ex::algorithms::branch_all {
 			template<class ChildOp>
             static Receiver make_for_child(ChildOp* child_op){
                 auto* storage = reinterpret_cast<std::byte*>(child_op);
-                auto* self = reinterpret_cast<BranchChildOp*>(storage);
+                auto* self = reinterpret_cast<ChildStorage*>(storage);
                 auto* parent_op = static_cast<ParentOp*>(self);
                 return Receiver{parent_op};           
             }
@@ -46,12 +47,12 @@ namespace ex::algorithms::branch_all {
     
         alignas(Sender) alignas(ChildOp) alignas(Result) std::array<std::byte, std::max({sizeof(Sender), sizeof(ChildOp), sizeof(Result)})> storage;
         
-        BranchChildOp() = default;
-        BranchChildOp(ChildSender child_sender){
+        ChildStorage() = default;
+        ChildStorage(ChildSender child_sender){
             ::new (&storage) Sender (child_sender);
         }
     
-        ~BranchChildOp() = default;
+        ~ChildStorage() = default;
     
         auto& construct_from(ChildSender child_sender){
             auto* parent_op = static_cast<ParentOp*>(this);
@@ -81,6 +82,6 @@ namespace ex::algorithms::branch_all {
             
     };
 
-}//namespace ex::algorithms::branch
+}}//namespace ex::details
 
-#endif//BRANCH_CHILD_HPP
+#endif//CHILD_STORAGE_HPP

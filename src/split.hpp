@@ -5,46 +5,47 @@
 #include "scheduler.hpp"
 #include "concepts.hpp"
 #include "inlined_receiver.hpp"
-#include "variant_child.hpp"
-#include "branch_child.hpp"
+#include "child_variant.hpp"
+#include "child_storage.hpp"
 #include "split_node.hpp"
 
-namespace ex::algorithms::split {
+namespace ex {
+inline namespace split_algorithm {
 	
 	struct SourceTag {};
 	
 	struct DependentTag {};
 
 
-	template<IsReceiver SuffixReceiver, IsScheduler Scheduler, IsSender SourceSender, class MonadicFunction>
-	struct OpState
-		: InlinedReceiver<OpState<SuffixReceiver, Scheduler, SourceSender, MonadicFunction>, SuffixReceiver>
-		, VariantChildOp<OpState<SuffixReceiver, Scheduler, SourceSender, MonadicFunction>, 0, typename Scheduler::sender_t, typename Scheduler::sender_t>
-		, branch_all::BranchChildOp<OpState<SuffixReceiver, Scheduler, SourceSender, MonadicFunction>, SourceTag{}, SourceSender>
-		, branch_all::BranchChildOp<OpState<SuffixReceiver, Scheduler, SourceSender, MonadicFunction>, DependentTag{}, std::invoke_result_t<MonadicFunction, SplitNodeSender<OpState<SuffixReceiver, Scheduler, SourceSender, MonadicFunction>, SourceSender>>>
+	template<IsReceiver NextRx, IsScheduler Sched, IsSender SrcSndr, class SndrFn>
+	struct Op
+		: InlinedReceiver<Op<NextRx, Sched, SrcSndr, SndrFn>, NextRx>
+		, ChildVariant<Op<NextRx, Sched, SrcSndr, SndrFn>, 0, typename Sched::sender_t, typename Sched::sender_t>
+		, ChildStorage<Op<NextRx, Sched, SrcSndr, SndrFn>, SourceTag{}, SrcSndr>
+		, ChildStorage<Op<NextRx, Sched, SrcSndr, SndrFn>, DependentTag{}, std::invoke_result_t<SndrFn, SplitNodeSender<Op<NextRx, Sched, SrcSndr, SndrFn>, SrcSndr>>>
 	{	
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
-		using DependentSender = std::invoke_result_t<MonadicFunction, SplitNodeSender<OpState, SourceSender>>;
+		using Receiver = InlinedReceiver<Op, NextRx>;
+		using DependentSender = std::invoke_result_t<SndrFn, SplitNodeSender<Op, SrcSndr>>;
 		
-		using SchedulerOp = VariantChildOp<OpState, 0, typename Scheduler::sender_t, typename Scheduler::sender_t>;
-		using SourceOp = branch_all::BranchChildOp<OpState, SourceTag{}, SourceSender>;
-		using DependentOp = branch_all::BranchChildOp<OpState, DependentTag{}, DependentSender>;
+		using SchedulerOp = ChildVariant<Op, 0, typename Sched::sender_t, typename Sched::sender_t>;
+		using SourceOp = ChildStorage<Op, SourceTag{}, SrcSndr>;
+		using DependentOp = ChildStorage<Op, DependentTag{}, DependentSender>;
 		
-		[[no_unique_address]] Scheduler scheduler;
-		[[no_unique_address]] MonadicFunction monadic_function;
+		[[no_unique_address]] Sched scheduler;
+		[[no_unique_address]] SndrFn sender_fn;
 		
 		std::atomic<void*> head = nullptr;
 		NodeOp* current_node_ptr = nullptr;
 		std::atomic<std::int8_t> counter = 1;
 
-		OpState(SuffixReceiver suffix_receiver, Scheduler scheduler, SourceSender source_sender, MonadicFunction monadic_function)
-			: Receiver{suffix_receiver}
+		Op(NextRx next_receiver, Sched scheduler, SrcSndr source_sender, SndrFn sender_fn)
+			: Receiver{next_receiver}
 			, SchedulerOp{scheduler.sender()}
 			, SourceOp{source_sender}
 			, DependentOp{}
 			, scheduler{scheduler}
-			, monadic_function{monadic_function}
+			, sender_fn{sender_fn}
 		{}
 
 		template<class... Cont>
@@ -58,7 +59,7 @@ namespace ex::algorithms::split {
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
 			requires (VariantIndex == 0)
         auto set_value(Cont&... cont){
-			auto dependent_sender = monadic_function(SplitNodeSender<OpState, SourceSender>{this});
+			auto dependent_sender = sender_fn(SplitNodeSender<Op, SrcSndr>{this});
 			auto& dependent_op = DependentOp::construct_from(dependent_sender);
 			[[gnu::musttail]] return ex::start(dependent_op, cont...);
 		}
@@ -147,31 +148,31 @@ namespace ex::algorithms::split {
 	};
 
 	
-	template<IsScheduler Scheduler, IsSender SourceSender, class MonadicFunction>
+	template<IsScheduler Sched, IsSender SrcSndr, class SndrFn>
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
-		using value_t = std::invoke_result_t<MonadicFunction, SourceSender>::value_t;
-		using error_t = std::invoke_result_t<MonadicFunction, SourceSender>::error_t;
+		using value_t = std::invoke_result_t<SndrFn, SrcSndr>::value_t;
+		using error_t = std::invoke_result_t<SndrFn, SrcSndr>::error_t;
 
-		[[no_unique_address]] Scheduler scheduler;
-		[[no_unique_address]] SourceSender source_sender;
-		[[no_unique_address]] MonadicFunction monadic_function;
+		[[no_unique_address]] Sched scheduler;
+		[[no_unique_address]] SrcSndr source_sender;
+		[[no_unique_address]] SndrFn sender_fn;
 
-		template<IsReceiver SuffixReceiver>
-		auto connect(SuffixReceiver suffix_receiver){
-			return OpState{suffix_receiver, scheduler, source_sender, monadic_function};
+		template<IsReceiver NextRx>
+		auto connect(NextRx next_receiver){
+			return Op{next_receiver, scheduler, source_sender, sender_fn};
 		}
 	};
 
-	struct FunctionObject {
+	struct FnObj {
 
-		static auto operator()(IsScheduler auto scheduler, IsSender auto source_sender, auto monadic_function){
-			return Sender{scheduler, source_sender, monadic_function};
+		static auto operator()(IsScheduler auto scheduler, IsSender auto source_sender, auto sender_fn){
+			return Sender{scheduler, source_sender, sender_fn};
 		}
 		
-		static auto operator()(IsScheduler auto scheduler, auto monadic_function){
+		static auto operator()(IsScheduler auto scheduler, auto sender_fn){
 			return [=](IsSender auto source_sender){
-				return Sender{scheduler, source_sender, monadic_function};
+				return Sender{scheduler, source_sender, sender_fn};
 			};
 		}
 		
@@ -179,11 +180,11 @@ namespace ex::algorithms::split {
 	};
 
 	
-}//namespace ex::algorithms::split
+}}//namespace ex::split_algorithm
 
 namespace ex {
 
-		inline constexpr auto split = algorithms::split::FunctionObject{};
+		inline constexpr auto split = split_algorithm::FnObj{};
 
 }//namespace ex
 

@@ -3,19 +3,19 @@
 
 #include "concepts.hpp"
 #include "inlined_receiver.hpp"
-#include "variant_child.hpp"
+#include "child_variant.hpp"
 
 namespace ex::algorithms::channel_else {
 
 	template<Channel channel, class SuffixReceiver, class Predicate, class ChildSender>
 	struct OpState 
 		: InlinedReceiver<OpState<channel, SuffixReceiver, Predicate, ChildSender>, SuffixReceiver>
-		, VariantChildOp<OpState<channel, SuffixReceiver, Predicate, ChildSender>, 0, ChildSender>
+		, ChildVariant<OpState<channel, SuffixReceiver, Predicate, ChildSender>, 0, ChildSender>
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
-		using ChildOp =  VariantChildOp<OpState, 0, ChildSender>;
+		using ChildOp =  ChildVariant<OpState, 0, ChildSender>;
 
 		Predicate predicate;
 

@@ -3,49 +3,50 @@
 
 #include <atomic>
 #include "scheduler.hpp"
-#include "branch_child.hpp"
+#include "child_storage.hpp"
 #include "concepts.hpp"
 #include "inlined_receiver.hpp"
-#include "variant_child.hpp"
+#include "child_variant.hpp"
 
-namespace ex::algorithms::branch_all {
+namespace ex {
+inline namespace branch_all_algorithm {
 	
 	struct ChildTag {
 		std::size_t child_index = 0;
 	};
 
 	template<class...>
-	struct OpStateBase;
+	struct OpBase;
 
-	template<IsReceiver SuffixReceiver, IsScheduler Scheduler, IsSender... Senders, std::size_t... I>
-	struct OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>
-		: InlinedReceiver<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, SuffixReceiver>
-		, VariantChildOp<
-			OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, 
+	template<IsReceiver NextRx, IsScheduler Sched, IsSender... Senders, std::size_t... I>
+	struct OpBase<std::index_sequence<I...>, NextRx, Sched, Senders...>
+		: InlinedReceiver<OpBase<std::index_sequence<I...>, NextRx, Sched, Senders...>, NextRx>
+		, ChildVariant<
+			OpBase<std::index_sequence<I...>, NextRx, Sched, Senders...>, 
 			0, 
-			std::conditional_t<true, typename Scheduler::sender_t, decltype(I)>...
+			std::conditional_t<true, typename Sched::sender_t, decltype(I)>...
 		  >
-		, BranchChildOp<OpStateBase<std::index_sequence<I...>, SuffixReceiver, Scheduler, Senders...>, ChildTag{I}, Senders>...
+		, ChildStorage<OpBase<std::index_sequence<I...>, NextRx, Sched, Senders...>, ChildTag{I}, Senders>...
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<OpStateBase, SuffixReceiver>;
-		using SchedulerSender = Scheduler::sender_t;
-		using SchedulerOp = VariantChildOp<
-			OpStateBase, 
+		using Receiver = InlinedReceiver<OpBase, NextRx>;
+		using SchedulerSender = Sched::sender_t;
+		using SchedulerOp = ChildVariant<
+			OpBase, 
 			0, 
 			std::conditional_t<true, SchedulerSender, decltype(I)>...
 		>;
 		
-		template<std::size_t Index> using ChildOp = BranchChildOp<OpStateBase, ChildTag{Index}, Senders...[Index]>;
+		template<std::size_t Index> using ChildOp = ChildStorage<OpBase, ChildTag{Index}, Senders...[Index]>;
 
 		static constexpr std::size_t size = sizeof...(Senders);
 		
-		Scheduler scheduler;
+		Sched scheduler;
 		std::atomic<std::int8_t> counter = size - 1;
 
-		OpStateBase(SuffixReceiver suffix_receiver, Scheduler scheduler, Senders... senders)
-			: Receiver{suffix_receiver}
+		OpBase(NextRx next_receiver, Sched scheduler, Senders... senders)
+			: Receiver{next_receiver}
 			, SchedulerOp{scheduler.sender()}
 			, ChildOp<I>{senders}...
 			, scheduler{scheduler}
@@ -53,11 +54,14 @@ namespace ex::algorithms::branch_all {
 
 		template<class... Cont>
 		auto start(Cont&... cont){
+			if constexpr(size == 0){
+				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont...);
+			}
 			//return SchedulerOp::template start<0, Cont...>(cont...);
 			[[gnu::musttail]] return set_value<size, 0, Cont...>(cont...); 
 		}
 		
-		//Scheduler Callback
+		//Sched Callback
 		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
 		auto set_value(Cont&... cont){
 			auto& child_sender = ChildOp<VariantIndex>::get_sender();
@@ -98,49 +102,49 @@ namespace ex::algorithms::branch_all {
 
 	};
 
-	template<IsReceiver SuffixReceiver, IsScheduler Scheduler, IsSender... Senders>
-	struct OpState 
-		: OpStateBase<std::index_sequence_for<Senders...>, SuffixReceiver, Scheduler, Senders...>
+	template<IsReceiver NextRx, IsScheduler Sched, IsSender... Senders>
+	struct Op 
+		: OpBase<std::index_sequence_for<Senders...>, NextRx, Sched, Senders...>
 	{
-		OpState(SuffixReceiver suffix_receiver, Scheduler scheduler, Senders... senders)
-			: OpStateBase<std::index_sequence_for<Senders...>, SuffixReceiver, Scheduler, Senders...>{suffix_receiver, scheduler, senders...}
+		Op(NextRx next_receiver, Sched scheduler, Senders... senders)
+			: OpBase<std::index_sequence_for<Senders...>, NextRx, Sched, Senders...>{next_receiver, scheduler, senders...}
 		{}
 	};
 	
-	template<IsScheduler Scheduler, IsSender... ChildSenders>
+	template<IsScheduler Sched, IsSender... ChildSenders>
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
 		using value_t = values_join_t<ChildSenders...>;
 		using error_t = ChildSenders...[0]::error_t;
 
-		Scheduler scheduler;
+		Sched scheduler;
 		std::tuple<ChildSenders...> tuple;
 
 		Sender(const Sender&) = default;
 
-		Sender(Scheduler scheduler, ChildSenders... child_senders)
+		Sender(Sched scheduler, ChildSenders... child_senders)
 			: scheduler{scheduler}
 			, tuple{child_senders...}
 		{}
 
-		Sender(Scheduler scheduler, Sender<Scheduler, ChildSenders...> branch_sender)
+		Sender(Sched scheduler, Sender<Sched, ChildSenders...> branch_sender)
 			: scheduler{scheduler}
 			, tuple{branch_sender.tuple}
 		{}
 		
-		template<IsReceiver SuffixReceiver>
-		auto connect(SuffixReceiver suffix_receiver){
+		template<IsReceiver NextRx>
+		auto connect(NextRx next_receiver){
 			auto lambda = [&](auto... child_senders){
-				return OpState{suffix_receiver, scheduler, child_senders...};
+				return Op{next_receiver, scheduler, child_senders...};
 			};
 
 			return std::apply(lambda, tuple);
 		}
 	};
 
-	struct FunctionObject {
+	struct FnObj {
 
-		auto operator()(this auto&&, IsScheduler auto scheduler, IsSender auto... senders){
+		static auto operator()(IsScheduler auto scheduler, IsSender auto... senders){
 			
 			auto lambda = [&](auto... senders){
 				return Sender{scheduler, senders...};
@@ -153,37 +157,38 @@ namespace ex::algorithms::branch_all {
 	};
 
 	
-}//namespace ex::algorithms::branch_all
+}}//namespace ex::branch_all_algorithm
 
 namespace ex {
 
-		inline constexpr auto branch_all = algorithms::branch_all::FunctionObject{};
+		inline constexpr auto branch_all = branch_all_algorithm::FnObj{};
 
 }//namespace ex
 
-namespace ex::algorithms::branch {
+namespace ex {
+inline namespace branch_algorithm {
 	
-	struct FunctionObject {
+	struct FnObj {
 		
-		template<IsScheduler Scheduler, IsSender Sender1, IsSender Sender2>
-		static auto operator()(Scheduler scheduler, Sender1 sender1, Sender2 sender2){
+		template<IsScheduler Sched, IsSender Sender1, IsSender Sender2>
+		static auto operator()(Sched scheduler, Sender1 sender1, Sender2 sender2){
 			return ex::branch_all(scheduler, sender1, sender2);
 		}
 
 		
-		template<IsScheduler Scheduler, IsSender Sender2>
-		static auto operator()(Scheduler scheduler, Sender2 sender2){
+		template<IsScheduler Sched, IsSender Sender2>
+		static auto operator()(Sched scheduler, Sender2 sender2){
 			return [scheduler, sender2]<IsSender Sender1>(Sender1 sender1){
 				return ex::branch_all(scheduler, sender1, sender2);
 			};
 		}
 	};
 	
-}//namespace ex::algorithms::branch
+}}//namespace ex::branch_algorithm
 
 namespace ex {
 
-	inline constexpr auto branch = algorithms::branch::FunctionObject{};
+	inline constexpr auto branch = branch_algorithm::FnObj{};
 	
 }//namespace ex
 

@@ -6,6 +6,8 @@
 #include "loopback_child.hpp"
 
 namespace ex {
+	
+inline namespace Scheduler{
 
 	struct InlineScheduler {
 	
@@ -58,7 +60,8 @@ namespace ex {
 		}
 
 	};
-
+	
+} //namespace scheduler
 } //namespace ex
 
 #endif//INLINE_SCHEDULER_H

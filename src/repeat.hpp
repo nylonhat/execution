@@ -3,19 +3,19 @@
 
 #include "concepts.hpp"
 #include "inlined_receiver.hpp"
-#include "variant_child.hpp"
+#include "child_variant.hpp"
 
 namespace ex::algorithms::repeat_while {
 
 	template<Channel channel, IsReceiver SuffixReceiver, IsSender ChildSender1, class Predicate, class MonadicFunction>
 	struct OpState 
 		: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, SuffixReceiver>
-		, VariantChildOp<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>
+		, ChildVariant<OpState<channel, SuffixReceiver, ChildSender1, Predicate, MonadicFunction>, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>
 	{
 
 		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
-		using ChildOps = VariantChildOp<OpState, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>; 
+		using ChildOps = ChildVariant<OpState, 0, ChildSender1, apply_values_t<MonadicFunction, ChildSender1>>; 
 
 		[[no_unique_address]] Predicate predicate;
 		[[no_unique_address]] MonadicFunction monadic_function;
@@ -125,7 +125,7 @@ namespace ex::algorithms::repeat_n {
 				return sender1;
 			};
 			//                              TODO: What init value?
-			return ex::repeat_while<channel>(std::apply(ex::pure<channel>, typename Sender1::value_t{}), loop, monadic_function);
+			return ex::repeat_while<channel>(std::apply(pure<channel>, typename Sender1::value_t{}), loop, monadic_function);
 		}
 
 		static auto operator()(const std::size_t iterations){

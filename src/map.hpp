@@ -3,24 +3,24 @@
 
 #include "concepts.hpp"
 #include "inlined_receiver.hpp"
-#include "variant_child.hpp"
+#include "child_variant.hpp"
 
 namespace ex {
-inline namespace algorithms_map {
+inline namespace map_algorithm {
 	
-	template<Channel channel, class SuffixReceiver, IsSender ChildSender, class Function>
-	struct OpState
-		: InlinedReceiver<OpState<channel, SuffixReceiver, ChildSender, Function>, SuffixReceiver>
-		, VariantChildOp<OpState<channel, SuffixReceiver, ChildSender, Function>, 0, ChildSender> 
+	template<Channel channel, class NextRx, IsSender ChildSender, class Function>
+	struct Op
+		: InlinedReceiver<Op<channel, NextRx, ChildSender, Function>, NextRx>
+		, ChildVariant<Op<channel, NextRx, ChildSender, Function>, 0, ChildSender> 
 	{ 
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
-		using ChildOp = VariantChildOp<OpState, 0, ChildSender>;
+		using Receiver = InlinedReceiver<Op, NextRx>;
+		using ChildOp = ChildVariant<Op, 0, ChildSender>;
 		
 		[[no_unique_address]] Function function;
 		
-		OpState(SuffixReceiver suffix_receiver, ChildSender child_sender, Function function)
-			: Receiver{suffix_receiver}
+		Op(NextRx next_receiver, ChildSender child_sender, Function function)
+			: Receiver{next_receiver}
 			, ChildOp{child_sender}
 			, function{function}
 		{}
@@ -74,34 +74,34 @@ inline namespace algorithms_map {
 	    [[no_unique_address]] ChildSender child_sender;
 	    [[no_unique_address]] Function function;
 
-		template<IsReceiver SuffixReceiver>
-	    constexpr auto connect(SuffixReceiver suffix_receiver){
-	        return OpState<channel, SuffixReceiver, ChildSender, Function>{suffix_receiver, child_sender, function};
+		template<IsReceiver NextRx>
+	    constexpr auto connect(NextRx next_receiver){
+	        return Op<channel, NextRx, ChildSender, Function>{next_receiver, child_sender, function};
 	    }
 
 	};
 
 	template<Channel channel>
-	struct FunctionObject {
+	struct FnObj {
 		template<IsSender ChildSender, class Function>
-		constexpr static auto operator()(ChildSender child_sender, Function function){
+		static auto operator()(ChildSender child_sender, Function function){
 			return Sender<channel, ChildSender, Function>{child_sender, function};
 		}
 
 		template<class Function>
-		constexpr static auto operator()(Function function){
+		static auto operator()(Function function){
 			return [=]<IsSender ChildSender>(ChildSender child_sender){
 				return Sender<channel, ChildSender, Function>{child_sender, function};
 			};
 		}
 	};
 
-}}//namespace ex::algorithms_map
+}}//namespace ex::map_algorithm
 
 namespace ex {
 
-	inline constexpr auto map_value = algorithms_map::FunctionObject<Channel::value>{};
-	inline constexpr auto map_error = algorithms_map::FunctionObject<Channel::error>{};
+	inline constexpr auto map_value = map_algorithm::FnObj<Channel::value>{};
+	inline constexpr auto map_error = map_algorithm::FnObj<Channel::error>{};
 
 }//namespace ex
 

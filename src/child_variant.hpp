@@ -1,5 +1,5 @@
-#ifndef VARIANT_CHILD_HPP
-#define VARIANT_CHILD_HPP
+#ifndef CHILD_VARIANT_HPP
+#define CHILD_VARIANT_HPP
 
 #include "concepts.hpp"
 #include <algorithm>
@@ -27,7 +27,7 @@ namespace ex {
     }
 
     template<class ParentOp, std::size_t ChildIndex, class... ChildSenders>
-    struct VariantChildOp {
+    struct ChildVariant {
 
         template <std::size_t VariantIndex>
         struct Receiver {
@@ -36,7 +36,7 @@ namespace ex {
 			template<class ChildOp>
 			static Receiver make_for_child(ChildOp* child_op){
 				auto* storage = reinterpret_cast<std::byte*>(child_op);
-				auto* self = reinterpret_cast<VariantChildOp*>(storage);
+				auto* self = reinterpret_cast<ChildVariant*>(storage);
 				auto* parent_op = static_cast<ParentOp*>(self);
 				return Receiver{parent_op};           
 			}
@@ -70,12 +70,12 @@ namespace ex {
         
         alignas(max_op_align<Receiver, ChildSenders...>()) std::array<std::byte, max_op_size<Receiver, ChildSenders...>()> storage;
     
-        VariantChildOp() = default;
-        VariantChildOp(ChildSenders...[0] sender){
+        ChildVariant() = default;
+        ChildVariant(ChildSenders...[0] sender){
             construct_from<0>(sender);
         }
         
-        ~VariantChildOp() = default;
+        ~ChildVariant() = default;
 
         // gcc can't mangle packs yet
         // template<std::size_t Index>
@@ -106,4 +106,4 @@ namespace ex {
 }
 
 
-#endif//VARIANT_CHILD_HPP
+#endif//CHILD_VARIANT_HPP

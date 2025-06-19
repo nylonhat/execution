@@ -5,7 +5,8 @@
 #include "inlined_receiver.hpp"
 #include "loopback_child.hpp"
 
-namespace ex::algorithms::split {
+namespace ex {
+inline namespace split_algorithm {
     
 	struct NodeOp {
 		using OpStateOptIn = ex::OpStateOptIn;
@@ -106,6 +107,6 @@ namespace ex::algorithms::split {
 		}
 	};
 
-}//namespace ex::algorithms::spit
+}}//namespace ex::split_algorithm
 
 #endif//SPLIT_NODE_HPP

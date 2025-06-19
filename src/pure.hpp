@@ -5,7 +5,7 @@
 #include "inlined_receiver.hpp"
 
 namespace ex {
-inline namespace algorithms_pure {
+inline namespace pure_algorithm {
     
     template<size_t I, class T>
     struct Leaf{
@@ -13,105 +13,105 @@ inline namespace algorithms_pure {
     };
 
     template<Channel channel, class...>
-    struct OpStateBase;
+    struct OpBase;
     
-    template<Channel channel, size_t... I, class NextReceiver, class... Values>
-    struct OpStateBase<channel, std::index_sequence<I...>, NextReceiver, Values...>
-        : InlinedReceiver<OpStateBase<channel, std::index_sequence<I...>, NextReceiver, Values...>, NextReceiver>
-        , Leaf<I, Values>...
+    template<Channel channel, size_t... I, class NextRx, class... Results>
+    struct OpBase<channel, std::index_sequence<I...>, NextRx, Results...>
+        : InlinedReceiver<OpBase<channel, std::index_sequence<I...>, NextRx, Results...>, NextRx>
+        , Leaf<I, Results>...
     {
 		using OpStateOptIn = ex::OpStateOptIn;
-        using Receiver = InlinedReceiver<OpStateBase, NextReceiver>;
+        using Receiver = InlinedReceiver<OpBase, NextRx>;
         
-        constexpr OpStateBase(NextReceiver next_receiver, Values... values)
+        constexpr OpBase(NextRx next_receiver, Results... results)
             : Receiver{next_receiver}
-            , Leaf<I, Values>{values}...
+            , Leaf<I, Results>{results}...
         {}
 
         template<class... Cont>
         constexpr void start(Cont&... cont){
             if constexpr(channel == Channel::value){
-                [[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., Leaf<I, Values>::member...);
+                [[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., Leaf<I, Results>::member...);
             } else if(channel == Channel::error){
-                [[gnu::musttail]] return ex::set_error<Cont...>(this->get_receiver(), cont..., Leaf<I, Values>::member...);
+                [[gnu::musttail]] return ex::set_error<Cont...>(this->get_receiver(), cont..., Leaf<I, Results>::member...);
             }
         }
     };
 
-    template<Channel channel, class NextReceiver, class... Values>
-    struct OpState 
-        : OpStateBase<channel, std::index_sequence_for<Values...>, NextReceiver, Values...>
+    template<Channel channel, class NextRx, class... Results>
+    struct Op 
+        : OpBase<channel, std::index_sequence_for<Results...>, NextRx, Results...>
     {
-        OpState(NextReceiver next_receiver, Values... values)
-            : OpStateBase<channel, std::index_sequence_for<Values...>, NextReceiver, Values...>{next_receiver, values...}
+        Op(NextRx next_receiver, Results... results)
+            : OpBase<channel, std::index_sequence_for<Results...>, NextRx, Results...>{next_receiver, results...}
         {}    
     };
 
-    template<Channel channel1, Channel channel2, class... Values>
+    template<Channel channel1, Channel channel2, class... Results>
     struct pure_channel;
 
-    template<Channel channel1, Channel channel2, class... Values>
+    template<Channel channel1, Channel channel2, class... Results>
     requires (channel1 == channel2)
-    struct pure_channel<channel1, channel2, Values...>{
-        using type = std::tuple<Values...>;
+    struct pure_channel<channel1, channel2, Results...>{
+        using type = std::tuple<Results...>;
     };
 
-    template<Channel channel1, Channel channel2, class... Values>
+    template<Channel channel1, Channel channel2, class... Results>
     requires (channel1 != channel2)
-    struct pure_channel<channel1, channel2, Values...>{
+    struct pure_channel<channel1, channel2, Results...>{
         using type = std::tuple<>;
     };
 
     template<Channel channel, class...>
     struct SenderBase;
 
-    template<Channel channel, size_t... I, class... Values>
-    struct SenderBase<channel, std::index_sequence<I...>, Values...>
-        : Leaf<I, Values>...
+    template<Channel channel, size_t... I, class... Results>
+    struct SenderBase<channel, std::index_sequence<I...>, Results...>
+        : Leaf<I, Results>...
     {
         
         using SenderOptIn = ex::SenderOptIn;
-        using value_t = pure_channel<Channel::value, channel, Values...>::type;        
-        using error_t = pure_channel<Channel::error, channel, Values...>::type;        
+        using value_t = pure_channel<Channel::value, channel, Results...>::type;        
+        using error_t = pure_channel<Channel::error, channel, Results...>::type;        
 
-        SenderBase(Values... values)
-            : Leaf<I, Values>{values}...
+        SenderBase(Results... results)
+            : Leaf<I, Results>{results}...
         {}
 
-        template<class NextReceiver>
-        auto connect(NextReceiver next_receiver){
-            return OpState<channel, NextReceiver, Values...>{next_receiver, Leaf<I, Values>::member...};
+        template<class NextRx>
+        auto connect(NextRx next_receiver){
+            return Op<channel, NextRx, Results...>{next_receiver, Leaf<I, Results>::member...};
         }
     };
 
-    template<Channel channel, class... Values>
+    template<Channel channel, class... Results>
     struct Sender 
-        : SenderBase<channel, std::index_sequence_for<Values...>, Values...>
+        : SenderBase<channel, std::index_sequence_for<Results...>, Results...>
     {
-        Sender(Values... values)
-            : SenderBase<channel, std::index_sequence_for<Values...>, Values...>{values...}
+        Sender(Results... results)
+            : SenderBase<channel, std::index_sequence_for<Results...>, Results...>{results...}
         {}
 
     };
 
     template<Channel channel>
-    struct FunctionObject {
+    struct FnObj {
 
-        template<class... Values>
-        constexpr static auto operator()(Values... values){
-            return Sender<channel, Values...>{values...};
+        template<class... Results>
+        constexpr static auto operator()(Results... results){
+            return Sender<channel, Results...>{results...};
         }
     };
 
-}}//namespace ex::algorithms_pure
+}}//namespace ex::pure_algorithm
 
 namespace ex {
 	
     template<Channel channel>
-    inline constexpr auto pure = algorithms_pure::FunctionObject<channel>{};
+    inline constexpr auto pure = pure_algorithm::FnObj<channel>{};
     
-    inline constexpr auto value = algorithms_pure::FunctionObject<Channel::value>{};
-    inline constexpr auto error = algorithms_pure::FunctionObject<Channel::error>{};
+    inline constexpr auto value = pure_algorithm::FnObj<Channel::value>{};
+    inline constexpr auto error = pure_algorithm::FnObj<Channel::error>{};
 
 }//namespace ex
 

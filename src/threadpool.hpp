@@ -9,7 +9,7 @@
 #include "bounded_threadpool.hpp"
 
 namespace ex {
-	
+inline namespace executor {
 	
 	template<std::size_t thread_count>
 	struct Threadpool {
@@ -119,7 +119,8 @@ namespace ex {
 		}
 
 	};
-	
+
+}
 }
 
 
