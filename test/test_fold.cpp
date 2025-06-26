@@ -41,6 +41,31 @@ namespace {
 		CHECK(result == control);
     
     }
+
+    
+	TEST_CASE("Async accumulate with bounded concurrency of 1 case"){
+		
+		ex::Threadpool<16> threadpool{};
+		auto scheduler = threadpool.scheduler();
+		
+		auto add = [](auto a, auto b){
+			return a + b;
+		};
+		
+		std::size_t min = 0;
+		std::size_t max = 1000000;
+		
+		auto sender_range = std::views::iota(min, max)
+			| std::views::transform(ex::value);
+			
+		auto result = ex::fold_on<1>(scheduler, sender_range, ex::value, min, add)
+			| ex::sync_wait;
+		
+		auto control = std::ranges::fold_left(std::views::iota(min, max), min, add);
+		
+		CHECK(result == control);
+    
+    }
 	
 	TEST_CASE("Async accumulate inline scheduler"){
 		
@@ -102,7 +127,8 @@ namespace {
 		CHECK(result == control);
     
     }    
-
+	
+	
 	
 	TEST_CASE("Fold tail call optimisation"){
 		

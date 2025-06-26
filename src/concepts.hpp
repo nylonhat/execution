@@ -27,6 +27,9 @@ namespace ex {
 
 	template<class T, class... Pack>
 	concept first_same_as = std::same_as<Pack...[0], T>;
+
+	template<class T, auto I>
+	using repeat_t = T;
 	
 	
 	constexpr auto operator | (ex::IsSender auto value, auto func){

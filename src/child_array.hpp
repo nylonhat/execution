@@ -48,15 +48,15 @@ inline namespace details {
     
         auto& construct_from_sender_at(ChildSender child_sender, std::size_t index){
             auto* parent_op = static_cast<ParentOp*>(this);
-            return *::new (&storage.at(index).child_op) ChildOp (ex::connect(child_sender, Receiver{parent_op, index}));
+            return *::new (&storage[index].child_op) ChildOp (ex::connect(child_sender, Receiver{parent_op, index}));
         }
         
         auto& construct_result_at(Result result, std::size_t index){
-            return *::new (&storage.at(index).result) Result (result);
+            return *::new (&storage[index].result) Result (result);
         }
 
         auto& get_result_at(std::size_t index){
-            return storage.at(index).result;
+            return storage[index].result;
         }
             
     };

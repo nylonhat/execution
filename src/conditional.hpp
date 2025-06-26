@@ -6,21 +6,22 @@
 #include "inlined_receiver.hpp"
 #include "child_variant.hpp"
 
-namespace ex::algorithms::channel_else {
+namespace ex {
+inline namespace channel_else_algorithm {
 
-	template<Channel channel, class SuffixReceiver, class Predicate, class ChildSender>
-	struct OpState 
-		: InlinedReceiver<OpState<channel, SuffixReceiver, Predicate, ChildSender>, SuffixReceiver>
-		, ChildVariant<OpState<channel, SuffixReceiver, Predicate, ChildSender>, 0, ChildSender>
+	template<Channel channel, IsReceiver NextRx, class Predicate, IsSender ChildSender>
+	struct Op 
+		: InlinedReceiver<Op<channel, NextRx, Predicate, ChildSender>, NextRx>
+		, ChildVariant<Op<channel, NextRx, Predicate, ChildSender>, 0, ChildSender>
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
-		using Receiver = InlinedReceiver<OpState, SuffixReceiver>;
-		using ChildOp =  ChildVariant<OpState, 0, ChildSender>;
+		using Receiver = InlinedReceiver<Op, NextRx>;
+		using ChildOp =  ChildVariant<Op, 0, ChildSender>;
 
 		Predicate predicate;
 
-		OpState(SuffixReceiver suffix_receiver, Predicate predicate, ChildSender child_sender)
+		Op(NextRx suffix_receiver, Predicate predicate, ChildSender child_sender)
 			: Receiver{suffix_receiver}
 			, ChildOp{child_sender}
 			, predicate{predicate}
@@ -64,15 +65,15 @@ namespace ex::algorithms::channel_else {
 	    [[no_unique_address]] Predicate predicate;
 	    [[no_unique_address]] ChildSender child_sender;
 
-		template<IsReceiver SuffixReceiver>
-	    auto connect(SuffixReceiver suffix_receiver){
-	    	return OpState<channel, SuffixReceiver, Predicate, ChildSender>{suffix_receiver, predicate, child_sender};
+		template<IsReceiver NextRx>
+	    auto connect(NextRx suffix_receiver){
+	    	return Op<channel, NextRx, Predicate, ChildSender>{suffix_receiver, predicate, child_sender};
 	    }
 
 	};
 
 	template<Channel channel>
-	struct FunctionObject {
+	struct FnObj{
 
 		template<class Predicate, IsSender ChildSender>
 		static auto operator()(ChildSender child_sender, Predicate predicate){
@@ -87,12 +88,12 @@ namespace ex::algorithms::channel_else {
 		}
 	};
 
-}//namespace map
+}}//namespace ex::channel_else_algorithm
 
 namespace ex {
 
-	inline constexpr auto value_else_error = algorithms::channel_else::FunctionObject<Channel::value>{};
-	inline constexpr auto error_else_value = algorithms::channel_else::FunctionObject<Channel::error>{};
+	inline constexpr auto value_else_error = channel_else_algorithm::FnObj<Channel::value>{};
+	inline constexpr auto error_else_value = channel_else_algorithm::FnObj<Channel::error>{};
 
 }//namespace ex
 

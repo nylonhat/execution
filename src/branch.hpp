@@ -19,32 +19,47 @@ inline namespace branch_all_algorithm {
 	template<class...>
 	struct OpBase;
 
+	//branch_all with no senders
+	template<IsReceiver NextRx, IsScheduler Sched, std::size_t... I>
+	struct OpBase<std::index_sequence<I...>, NextRx, Sched>
+		: InlinedReceiver<OpBase<std::index_sequence<I...>, NextRx, Sched>, NextRx>
+	{
+		
+		using OpStateOptIn = ex::OpStateOptIn;
+		using Receiver = InlinedReceiver<OpBase, NextRx>;
+		using SchedulerSender = Sched::sender_t;
+		
+		[[no_unique_address]] Sched scheduler;
+
+		OpBase(NextRx next_receiver, Sched scheduler)
+			: Receiver{next_receiver}
+			, scheduler{scheduler}
+		{}
+
+		template<class... Cont>
+		auto start(Cont&... cont){
+			[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont...);
+		}
+	};
+
 	template<IsReceiver NextRx, IsScheduler Sched, IsSender... Senders, std::size_t... I>
 	struct OpBase<std::index_sequence<I...>, NextRx, Sched, Senders...>
 		: InlinedReceiver<OpBase<std::index_sequence<I...>, NextRx, Sched, Senders...>, NextRx>
-		, ChildVariant<
-			OpBase<std::index_sequence<I...>, NextRx, Sched, Senders...>, 
-			0, 
-			std::conditional_t<true, typename Sched::sender_t, decltype(I)>...
-		  >
+		, ChildVariant<OpBase<std::index_sequence<I...>, NextRx, Sched, Senders...>, 0, repeat_t<typename Sched::sender_t, I>...>
 		, ChildStorage<OpBase<std::index_sequence<I...>, NextRx, Sched, Senders...>, ChildTag{I}, Senders>...
 	{
 		
 		using OpStateOptIn = ex::OpStateOptIn;
 		using Receiver = InlinedReceiver<OpBase, NextRx>;
 		using SchedulerSender = Sched::sender_t;
-		using SchedulerOp = ChildVariant<
-			OpBase, 
-			0, 
-			std::conditional_t<true, SchedulerSender, decltype(I)>...
-		>;
+		using SchedulerOp = ChildVariant<OpBase, 0, repeat_t<SchedulerSender, I>...>;
 		
 		template<std::size_t Index> using ChildOp = ChildStorage<OpBase, ChildTag{Index}, Senders...[Index]>;
 
 		static constexpr std::size_t size = sizeof...(Senders);
 		
-		Sched scheduler;
-		std::atomic<std::int8_t> counter = size - 1;
+		[[no_unique_address]] Sched scheduler;
+		std::atomic<std::int8_t> counter = size;
 
 		OpBase(NextRx next_receiver, Sched scheduler, Senders... senders)
 			: Receiver{next_receiver}
@@ -55,9 +70,6 @@ inline namespace branch_all_algorithm {
 
 		template<class... Cont>
 		auto start(Cont&... cont){
-			if constexpr(size == 0){
-				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont...);
-			}
 			//return SchedulerOp::template start<0, Cont...>(cont...);
 			[[gnu::musttail]] return set_value<size, 0, Cont...>(cont...); 
 		}
@@ -80,7 +92,6 @@ inline namespace branch_all_algorithm {
 		//Child Result Callback (No schedule)
 		template<ChildTag tag, class... Cont, class... Args>
 			requires first_same_as<typename SchedulerOp::template VariantOp<tag.child_index+1>::Loopback, Cont...> 
-			|| first_same_as<typename ChildOp<tag.child_index+1>::ChildOp, Cont...>
 		auto set_value(Cont&... cont, Args... args){
         	ChildOp<tag.child_index>::construct_result(args...);
 	        counter.fetch_sub(1);
@@ -91,9 +102,10 @@ inline namespace branch_all_algorithm {
 		template<ChildTag tag, class... Cont, class... Args>
 		auto set_value(Cont&... cont, Args... args){
         	ChildOp<tag.child_index>::construct_result(args...);
-	        auto old = counter.fetch_sub(1);
+	        auto old_count = counter.fetch_sub(1);
 			
-			if(old == 0){
+			if(old_count == 1){
+				//Last to finish
 				static_assert(sizeof...(cont) == 0);
 				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., ChildOp<I>::get_result()...);
 			}
@@ -112,11 +124,12 @@ inline namespace branch_all_algorithm {
 		{}
 	};
 	
+	
 	template<IsScheduler Sched, IsSender... ChildSenders>
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
 		using value_t = sig_values_join_t<ChildSenders...>;
-		using error_t = ChildSenders...[0]::error_t;
+		using error_t = std::tuple<>;//ChildSenders...[0]::error_t;
 
 		Sched scheduler;
 		std::tuple<ChildSenders...> tuple;

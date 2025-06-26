@@ -15,9 +15,13 @@ inline namespace fold_algorithm {
 	
 	struct ChildTag{};
 
+	
+	template<std::size_t Size, IsReceiver NextRx, IsScheduler Sched, std::ranges::range SndrRng, class SndrFn, class Init, class FoldFn>
+	struct Op;
+
 	template<std::size_t Size, IsReceiver NextRx, IsScheduler Sched, std::ranges::range SndrRng, class SndrFn, class Init, class FoldFn>
 		requires (Size > 1)
-	struct Op
+	struct Op<Size, NextRx, Sched, SndrRng, SndrFn, Init, FoldFn>
 		: InlinedReceiver<Op<Size, NextRx, Sched, SndrRng, SndrFn, Init, FoldFn>, NextRx>
 		, ChildVariant<Op<Size, NextRx, Sched, SndrRng, SndrFn, Init, FoldFn>, 0, typename Sched::sender_t, std::ranges::range_value_t<SndrRng>>
 		, ChildArray<Size, Op<Size, NextRx, Sched, SndrRng, SndrFn, Init, FoldFn>, ChildTag{}, sender_of_apply_signature_t<SndrFn, channel_sig_t<Channel::value, std::ranges::range_value_t<SndrRng>>>>
@@ -72,9 +76,9 @@ inline namespace fold_algorithm {
 
 		template<class... Cont>
 		void start(Cont&... cont){
-			if(iter == sentinel){
-				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., folded_value);
-			}
+			//if(iter == sentinel){
+			//	[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., folded_value);
+			//}
 			
 			[[gnu::musttail]] return ex::start(LoopOp::template get<0>(), cont...);
 			// static_assert(sizeof...(cont) == 0);
@@ -90,19 +94,17 @@ inline namespace fold_algorithm {
 			
 			if(iter == sentinel){
 				//Signal that were finished
-				auto old_tag = ticket_ring.at((head_now-1) % Size).tag.fetch_add(2);
+				auto old_tag = ticket_ring[(head_now-1) % Size].tag.fetch_add(2);
 				
 				if (old_tag == head_now){
 					[[gnu::musttail]] return ex::start(cont...);
 				}
 
-				if constexpr(!first_same_as<typename ChildOps::ChildOp, Cont...>){
-					[[gnu::musttail]] return finish(cont...);
-				}
+				[[gnu::musttail]] return finish(cont...);
 			}
 			
 			//Acquire a slot
-			auto old_tag = ticket_ring.at(head_now % Size).tag.fetch_add(1);
+			auto old_tag = ticket_ring[head_now % Size].tag.fetch_add(1);
 
 			if(old_tag == head_now){
 				[[gnu::musttail]] return produce(cont...);
@@ -125,7 +127,7 @@ inline namespace fold_algorithm {
 		void set_value(Cont&... cont, Args... args){
 			auto old_head = head++;
 			
-			auto ticket = ticket_ring.at(old_head % Size).ticket;
+			auto ticket = ticket_ring[old_head % Size].ticket;
 			
 			if(old_head >= Size){
 				auto value = ChildOps::get_result_at(ticket);
@@ -145,12 +147,12 @@ inline namespace fold_algorithm {
 			
 			auto old_tail = tail.fetch_add(1);
 			
-			ticket_ring.at(old_tail % Size).ticket = ticket;
+			ticket_ring[old_tail % Size].ticket = ticket;
 			
 			//Release the slot
-			auto old_tag = ticket_ring.at(old_tail % Size).tag.fetch_add(Size-1);
+			auto old_tag = ticket_ring[old_tail % Size].tag.fetch_add(Size-1);
 			
-			if constexpr((!first_same_as<typename LoopOp::template VariantOp<0>::Loopback, Cont...>) && (!first_same_as<typename ChildOps::ChildOp, Cont...>)){
+			if constexpr(!first_same_as<typename LoopOp::template VariantOp<0>::Loopback, Cont...>){
 				//Wake up producer
 				if(old_tag == old_tail + 2){
 					[[gnu::musttail]] return produce(cont...);
@@ -180,9 +182,84 @@ inline namespace fold_algorithm {
 		
 	};
 
+	//Special case optimisation for size 1
+	template<IsReceiver NextRx, IsScheduler Sched, std::ranges::range SndrRng, class SndrFn, class Init, class FoldFn>
+	struct Op<1, NextRx, Sched, SndrRng, SndrFn, Init, FoldFn>
+		: InlinedReceiver<Op<1, NextRx, Sched, SndrRng, SndrFn, Init, FoldFn>, NextRx>
+		, ChildVariant<Op<1, NextRx, Sched, SndrRng, SndrFn, Init, FoldFn>, 0, typename Sched::sender_t, std::ranges::range_value_t<SndrRng>, sender_of_apply_signature_t<SndrFn, channel_sig_t<Channel::value, std::ranges::range_value_t<SndrRng>>>>
+	{
+		
+		using OpStateOptIn = ex::OpStateOptIn;
+		using Receiver = InlinedReceiver<Op, NextRx>;
+		using SchedulerSender = Sched::sender_t;
+		using RangeSender = std::ranges::range_value_t<SndrRng>;
+		using ChildSender = sender_of_apply_signature_t<SndrFn, channel_sig_t<Channel::value, RangeSender>>;
+		using LoopOp = ChildVariant<Op, 0, SchedulerSender, RangeSender, ChildSender>;
+		
+		Sched scheduler;
+		SndrRng sender_range;
+		SndrFn sender_fn;
+		Init folded_value;
+		FoldFn fold_fn;
+		
+		std::ranges::iterator_t<SndrRng> iter;
+		std::ranges::sentinel_t<SndrRng> sentinel;
+							
+		Op(NextRx next_receiver, Sched scheduler, SndrRng sender_range, SndrFn sender_fn, Init init, FoldFn fold_fn)
+			: Receiver{next_receiver}
+			, LoopOp{scheduler.sender()}
+			, scheduler{scheduler}
+			, sender_range{sender_range}
+			, sender_fn{sender_fn}
+			, folded_value{init}
+			, fold_fn{fold_fn}
+			, iter{sender_range.begin()}
+			, sentinel{sender_range.end()}
+		{}
+
+		template<class... Cont>
+		void start(Cont&... cont){
+			[[gnu::musttail]] return ex::start(LoopOp::template get<0>(), cont...);
+			// [[gnu::musttail]] return set_value<0, 0, Cont...>(cont...);
+		}
+		
+		//Sched Callback
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont>
+			requires same_index<ChildIndex, 0> && same_index<VariantIndex, 0>
+		void set_value(Cont&... cont){
+			if(iter == sentinel){
+				//finish
+				[[gnu::musttail]] return ex::set_value<Cont...>(this->get_receiver(), cont..., folded_value);
+			}
+			
+			auto& range_op = LoopOp::template construct_from<1>(*(iter++));
+			[[gnu::musttail]] return ex::start(range_op, cont...);
+		}
+
+		
+		//Range sender callback
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class... Args>
+			requires same_index<ChildIndex, 0> && same_index<VariantIndex, 1>
+		void set_value(Cont&... cont, Args... args){
+			auto& child_op = LoopOp::template construct_from<2>(sender_fn(args...));
+			[[gnu::musttail]] return ex::start(child_op, cont...);
+		}
+
+		
+		//Child Result Callback
+		template<std::size_t ChildIndex, std::size_t VariantIndex, class... Cont, class Arg>
+			requires same_index<ChildIndex, 0> && same_index<VariantIndex, 2>
+		void set_value(Cont&... cont, Arg arg){
+			folded_value = fold_fn(arg, folded_value);
+			[[gnu::musttail]] return set_value<0, 0, Cont...>(cont...);
+        }
+        
+		
+	};
+
 	
 	template<std::size_t Size, IsScheduler Sched, std::ranges::range SndrRng, class SndrFn, class Init, class FoldFn>
-		requires (Size > 1)	
+		requires (Size > 0)	
 	struct Sender {
 		using SenderOptIn = ex::SenderOptIn;
 		using value_t = std::tuple<std::tuple<Init>>;
@@ -211,7 +288,7 @@ inline namespace fold_algorithm {
 	};
 
 	template<std::size_t Size>
-		requires (Size > 1)
+		requires (Size > 0)
 	struct FnObj {
 		
 		template<IsScheduler Sched, std::ranges::range SndrRng, class SndrFn, class Init, class FoldFn>
@@ -227,7 +304,7 @@ inline namespace fold_algorithm {
 namespace ex {
 		
 		template<std::size_t Size>
-			requires (Size > 1)
+			requires (Size > 0)
 		inline constexpr auto fold_on = fold_algorithm::FnObj<Size>{};
 
 }//namespace ex

@@ -101,6 +101,23 @@ namespace {
 
     	CHECK((result/iterations) <= (control/iterations));
     }
+
+	
+	TEST_CASE("branch all no senders"){
+    	ex::Threadpool<0> threadpool{};
+		auto scheduler = threadpool.scheduler();
+
+		auto int_fn = [](){return 42;};
+		
+    	auto result = ex::branch_all(scheduler)
+    		| ex::map_value(int_fn)
+    		| ex::sync_wait;
+		
+		auto control = int_fn();
+
+    	CHECK(result == control);
+    }
+
 	
 	TEST_CASE("branch multiple times"){
     	ex::Threadpool<4> threadpool{};
