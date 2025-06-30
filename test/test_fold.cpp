@@ -145,7 +145,7 @@ namespace {
 		auto sender_range = std::views::iota(min, max)
 			| std::views::transform(ex::value);
 			
-		auto result = ex::fold_on<2>(scheduler, sender_range, ex::value, min, add)
+		auto result = ex::fold_on<1>(scheduler, sender_range, ex::value, min, add)
 		    | ex::repeat_n_value(10'000'000)
 			| ex::sync_wait;
 		

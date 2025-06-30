@@ -30,11 +30,10 @@ namespace {
     	}
     }
 
-    struct Fetch3 {
+    struct Fetch2 {
         __attribute__((noinline))
         static auto operator()(auto... v){
             volatile std::atomic<int8_t> a = 1;
-            a.fetch_sub(1);
             a.fetch_sub(1);
             a.fetch_sub(1);
             return (... + v);
@@ -45,7 +44,6 @@ namespace {
         __attribute__((noinline))
         static auto operator()(auto... v){
             volatile std::atomic<int8_t> a = 1;
-            a.fetch_sub(1);
             a.fetch_sub(1);
             a.fetch_sub(1);
             a.fetch_sub(1);
@@ -63,7 +61,7 @@ namespace {
 		const size_t iterations = 10'000'000;
 
         auto control = ex::value(4)
-            | ex::map_value(Fetch3{})
+            | ex::map_value(Fetch2{})
             | ex::repeat_n_value(iterations)
             | ex::benchmark
             | ex::sync_wait;

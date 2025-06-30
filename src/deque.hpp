@@ -12,14 +12,14 @@
  * for multiple consumers.
  */
 template<typename T, size_t buffer_size>
-requires
-	(std::has_single_bit(buffer_size)) //power of 2
+requires (buffer_size > 1)
+	&& (std::has_single_bit(buffer_size)) //power of 2
 
 class Deque {
 private:
 	struct alignas(64) Cell {
-		std::atomic<size_t> steal_tag;
-		std::atomic<size_t> stack_tag;
+		std::atomic<std::size_t> steal_tag;
+		std::atomic<std::size_t> stack_tag;
 		T data;
 	};
 	
@@ -27,14 +27,14 @@ private:
 	
 	std::array<Cell, buffer_size> buffer;
 	
-	alignas(64) size_t stack_index = 0;
-	alignas(64) std::atomic<size_t> steal_index = 0;
+	alignas(64) std::size_t stack_index = 0;
+	alignas(64) std::atomic<std::size_t> steal_index = 0;
 
 	using m = std::memory_order;
 
 public:
 	Deque(){
-		for(size_t i = 0; i < buffer_size; i++){
+		for(size_t i = 0; i < buffer_size; ++i){
 			buffer[i].steal_tag.store(i, m::relaxed);
 			buffer[i].stack_tag.store(i, m::relaxed);
 		}
@@ -92,27 +92,22 @@ public:
 			
 			//Race to steal item
 			auto test_tag = steal_key;
-			cell.steal_tag.compare_exchange_strong(
+			const auto won_race = cell.steal_tag.compare_exchange_strong(
 				test_tag, next_tag, m::acq_rel
 			);
 
-			//Circular Difference
-			auto wrap_tag = std::bit_cast<ptrdiff_t>(test_tag);
-			auto wrap_key = std::bit_cast<ptrdiff_t>(steal_key); 
-			auto difference = wrap_tag - wrap_key;
-		
-			if(difference < 0){
+			if(test_tag == steal_now){
 				//Deque is empty
 				return false;
 			}
 
-			//A stealer won. One stealer must update steal_index
+			//A stealer won. Help each other update steal_index
 			test_tag = steal_now;
 			steal_index.compare_exchange_strong(
 				test_tag, steal_key, m::acq_rel
 			);
 		
-			if(difference > 0){
+			if(!won_race){
 				//We lost but there maybe more to steal. 
 				continue;
 			}
